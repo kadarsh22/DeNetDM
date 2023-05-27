@@ -4,6 +4,7 @@ from module.mlp import MLP
 from torchvision.models import resnet18, resnet50
 
 def get_model(model_tag, num_classes):
+    model_tag = "ResNet20"
     if model_tag == "ResNet20":
         return resnet20(num_classes)
     elif model_tag == "ResNet18":

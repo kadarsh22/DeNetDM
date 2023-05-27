@@ -40,12 +40,12 @@ class ZippedDataset(Dataset):
 
         return item
 
-    
+
 transforms = {
     "ColoredMNIST": {
         "train": T.Compose([T.ToTensor()]),
         "eval": T.Compose([T.ToTensor()])
-        },
+    },
     "CorruptedCIFAR10": {
         "train_aug": T.Compose(
             [
@@ -92,7 +92,7 @@ transforms = {
                 T.Resize((224, 224)),
                 T.RandomHorizontalFlip(),
                 T.ToTensor(),
-                T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]), 
+                T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         ),
         "eval": T.Compose(
@@ -104,6 +104,8 @@ transforms = {
         ),
     },
 }
+
+from ccifar10 import CIFAR10Dataset
 
 
 def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
@@ -120,6 +122,8 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
             transform=transform,
         )
     else:
+        # dataset = CIFAR10Dataset(
+        #     root=root, split=dataset_split, transform=transform)
         dataset = AttributeDataset(
             root=root, split=dataset_split, transform=transform
         )

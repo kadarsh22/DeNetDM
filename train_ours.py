@@ -1,5 +1,7 @@
 import os
 import pickle
+import sys
+
 from tqdm import tqdm
 from datetime import datetime
 import wandb
@@ -25,6 +27,8 @@ from config import ex
 from data.util import get_dataset, IdxDataset, ZippedDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
+from loss import FocalLoss
+
 
 def set_seed(seed: int = 42) -> None:
     np.random.seed(seed)
@@ -38,6 +42,7 @@ def set_seed(seed: int = 42) -> None:
     os.environ["PYTHONHASHSEED"] = str(seed)
     print(f"Random seed set as {seed}")
 
+
 @ex.automain
 def train(
         main_tag,
@@ -46,6 +51,8 @@ def train(
         data_dir,
         log_dir,
         device,
+        gamma,
+        gce_model_path,
         target_attr_idx,
         bias_attr_idx,
         main_num_steps,
@@ -59,12 +66,13 @@ def train(
 
     wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "vanilla_" + str(dataset_tag)
+    wandb.run.name = "ours_" + str(dataset_tag) + "_" + 'gamma' + str(gamma)
     wandb.run.log_code(".")
-    wandb.config.update({"dataset_tag": dataset_tag, "algorithm": 'vanilla'})
+    wandb.config.update({"dataset_tag": dataset_tag,
+                         "gamma": gamma, "algorithm": "ours"})
     artifact = wandb.Artifact(wandb.run.name, type='model')
-    set_seed()
 
+    set_seed()
     device = torch.device(device)
     start_time = datetime.now()
     writer = SummaryWriter(os.path.join(log_dir, "summary", main_tag))
@@ -107,11 +115,12 @@ def train(
         shuffle=False,
         num_workers=16,
         pin_memory=True,
+        drop_last=True
     )
 
     # define model and optimizer
     model = get_model(model_tag, num_classes).to(device)
-    # main_optimizer_tag = "SGD"
+    gce_model = get_model(model_tag, num_classes).to(device)
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -135,8 +144,9 @@ def train(
         raise NotImplementedError
 
     # define loss
-    criterion = torch.nn.CrossEntropyLoss()
-    label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
+    # criterion = torch.nn.CrossEntropyLoss()
+    # label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
+    label_criterion = FocalLoss(gamma=gamma)
 
     # define evaluation function
     def evaluate(model, data_loader):
@@ -217,6 +227,11 @@ def train(
 
     valid_attrwise_accs_list = []
 
+    print(dataset_tag)
+    print('loading gce model from ' + str(gce_model_path))
+    gce_model.load_state_dict(torch.load(gce_model_path)['state_dict_gce'], strict=True)
+    gce_model.eval()
+
     for step in tqdm(range(main_num_steps)):
         try:
             index, data, attr = next(train_iter)
@@ -230,7 +245,8 @@ def train(
         label = attr[:, target_attr_idx]
 
         logit = model(data)
-        loss_per_sample = label_criterion(logit.squeeze(1), label)
+        x_ref = gce_model(data)
+        loss_per_sample = label_criterion(logit.squeeze(1), label, x_ref)
 
         loss = loss_per_sample.mean()
 
@@ -239,7 +255,7 @@ def train(
         optimizer.step()
 
         main_log_freq = 10
-        if step % main_log_freq == 0:
+        if step % main_log_freq == 0 and step != 0:
             loss = loss.detach().cpu()
             writer.add_scalar("loss/train", loss, step)
 
@@ -276,7 +292,7 @@ def train(
     with open(result_path, "wb") as f:
         torch.save({"valid/attrwise_accs": valid_attrwise_accs_list}, f)
 
-#    visualise_model_predictions(model, valid_loader, device)
+    visualise_model_predictions(model, valid_loader, device)
     plot_confusion_matrix(model, valid_loader, device)
     model_path = os.path.join(log_dir, "result", main_tag, "model.th")
     state_dict = {

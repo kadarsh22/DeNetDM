@@ -2,6 +2,7 @@ import os
 import pickle
 from tqdm import tqdm
 from datetime import datetime
+import wandb
 
 import numpy as np
 
@@ -10,6 +11,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
+import torchvision
+import matplotlib.pyplot as plt
 
 import warnings
 
@@ -22,28 +25,50 @@ from data.util import get_dataset, IdxDataset, ZippedDataset
 from module.loss import GeneralizedCELoss
 from module.util import get_model
 from util import MultiDimAverageMeter, EMA
+import random
 
-    
+
+def set_seed(seed: int = 42) -> None:
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    # When running on the CuDNN backend, two further options must be set
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    # Set a fixed value for the hash seed
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    print(f"Random seed set as {seed}")
+
+
 @ex.automain
 def train(
-    main_tag,
-    dataset_tag,
-    model_tag,
-    data_dir,
-    log_dir,
-    device,
-    target_attr_idx,
-    bias_attr_idx,
-    main_num_steps,
-    main_valid_freq,
-    main_batch_size,
-    main_optimizer_tag,
-    main_learning_rate,
-    main_weight_decay,
+        main_tag,
+        dataset_tag,
+        model_tag,
+        data_dir,
+        log_dir,
+        device,
+        target_attr_idx,
+        bias_attr_idx,
+        main_num_steps,
+        main_valid_freq,
+        main_batch_size,
+        main_optimizer_tag,
+        main_learning_rate,
+        main_weight_decay,
 ):
-
     print(dataset_tag)
-    
+    wandb.login()
+
+    wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
+               sync_tensorboard=True)
+    wandb.run.name = "lff_" + str(dataset_tag)
+    wandb.run.log_code(".")
+    wandb.config.update({"dataset_tag": dataset_tag, 'algorithm': 'lff'})
+    artifact = wandb.Artifact(wandb.run.name, type='model')
+
+    set_seed()
     device = torch.device(device)
     start_time = datetime.now()
     writer = SummaryWriter(os.path.join(log_dir, "summary", main_tag))
@@ -66,9 +91,9 @@ def train(
     attr_dims.append(torch.max(train_target_attr).item() + 1)
     attr_dims.append(torch.max(train_bias_attr).item() + 1)
     num_classes = attr_dims[0]
-        
+
     train_dataset = IdxDataset(train_dataset)
-    valid_dataset = IdxDataset(valid_dataset)    
+    valid_dataset = IdxDataset(valid_dataset)
 
     # make loader    
     train_loader = DataLoader(
@@ -85,12 +110,13 @@ def train(
         shuffle=False,
         num_workers=16,
         pin_memory=True,
+        drop_last=True
     )
-    
+
     # define model and optimizer
     model_b = get_model(model_tag, attr_dims[0]).to(device)
     model_d = get_model(model_tag, attr_dims[0]).to(device)
-    
+
     if main_optimizer_tag == "SGD":
         optimizer_b = torch.optim.SGD(
             model_b.parameters(),
@@ -128,11 +154,11 @@ def train(
         )
     else:
         raise NotImplementedError
-    
+
     # define loss
     criterion = nn.CrossEntropyLoss(reduction='none')
     bias_criterion = GeneralizedCELoss()
-    
+
     sample_loss_ema_b = EMA(torch.LongTensor(train_target_attr), alpha=0.7)
     sample_loss_ema_d = EMA(torch.LongTensor(train_target_attr), alpha=0.7)
 
@@ -161,12 +187,49 @@ def train(
 
         return accs
 
+    def plot_confusion_matrix(model, valid_loader, device, model_name):
+        correct = 0
+        total = 0
+        ground_truths = []
+        predictions = []
+        for index, data, attr in valid_loader:
+            images = data.to(device)
+            attr = attr.to(device)
+            labels = attr[:, target_attr_idx]
+            ground_truths.append(labels)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            predictions.append(predicted)
+            total += labels.size(0)
+            correct += (predicted.cpu() == labels.cpu()).sum()
+        ground_truths = torch.stack(ground_truths).cpu().view(-1).numpy()
+        predictions = torch.stack(predictions).cpu().view(-1).numpy()
+        class_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        wandb.log({"conf_mat" + str(model_name): wandb.plot.confusion_matrix(probs=None,
+                                                                             y_true=ground_truths, preds=predictions,
+                                                                             class_names=class_names)})
+
+    def visualise_model_predictions(model, valid_loader, device, model_name):
+        data = [(images, torch.max(model(images.to(device)).data, 1)[1]) for index, images, attr in valid_loader]
+        x = torch.stack([d[0] for d in data]).view(-1, 3, 32, 32)  ##TODO
+        l = torch.stack([d[1] for d in data]).view(-1)
+        images = []
+        for i in range(10):
+            if x[l.cpu() == i][:10].shape[0] == 10:
+                images.append(x[l.cpu() == i][:10])
+            else:
+                images.append(torch.zeros((10, 3, 32, 32)))
+        images = torch.stack(images).view(-1, 3, 32, 32)
+        grid_img = torchvision.utils.make_grid(images[:100], nrow=10, normalize=False)
+        plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
+        wandb.log({"predictions" + str(model_name): wandb.Image(grid_img)})
+
     # jointly training biased/de-biased model
     valid_attrwise_accs_list = []
     num_updated = 0
-    
+
     for step in tqdm(range(main_num_steps)):
-        
+
         # train main model
         try:
             index, data, attr = next(train_iter)
@@ -178,51 +241,51 @@ def train(
         attr = attr.to(device)
         label = attr[:, target_attr_idx]
         bias_label = attr[:, bias_attr_idx]
-        
+
         logit_b = model_b(data)
         if np.isnan(logit_b.mean().item()):
             print(logit_b)
             raise NameError('logit_b')
         logit_d = model_d(data)
-        
+
         loss_b = criterion(logit_b, label).cpu().detach()
         loss_d = criterion(logit_d, label).cpu().detach()
-                
+
         if np.isnan(loss_b.mean().item()):
             raise NameError('loss_b')
         if np.isnan(loss_d.mean().item()):
             raise NameError('loss_d')
-        
+
         loss_per_sample_b = loss_b
         loss_per_sample_d = loss_d
-        
+
         # EMA sample loss
         sample_loss_ema_b.update(loss_b, index)
         sample_loss_ema_d.update(loss_d, index)
-        
+
         # class-wise normalize
         loss_b = sample_loss_ema_b.parameter[index].clone().detach()
         loss_d = sample_loss_ema_d.parameter[index].clone().detach()
-        
+
         if np.isnan(loss_b.mean().item()):
             raise NameError('loss_b_ema')
         if np.isnan(loss_d.mean().item()):
             raise NameError('loss_d_ema')
-        
+
         label_cpu = label.cpu()
-        
+
         for c in range(num_classes):
             class_index = np.where(label_cpu == c)[0]
             max_loss_b = sample_loss_ema_b.max_loss(c)
             max_loss_d = sample_loss_ema_d.max_loss(c)
             loss_b[class_index] /= max_loss_b
             loss_d[class_index] /= max_loss_d
-            
+
         # re-weighting based on loss value / generalized CE for biased model
         loss_weight = loss_b / (loss_b + loss_d + 1e-8)
         if np.isnan(loss_weight.mean().item()):
             raise NameError('loss_weight')
-            
+
         loss_b_update = bias_criterion(logit_b, label)
 
         if np.isnan(loss_b_update.mean().item()):
@@ -231,7 +294,7 @@ def train(
         if np.isnan(loss_d_update.mean().item()):
             raise NameError('loss_d_update')
         loss = loss_b_update.mean() + loss_d_update.mean()
-        
+
         num_updated += loss_weight.mean().item() * data.size(0)
 
         optimizer_b.zero_grad()
@@ -239,10 +302,10 @@ def train(
         loss.backward()
         optimizer_b.step()
         optimizer_d.step()
-        
+
         main_log_freq = 10
         if step % main_log_freq == 0:
-        
+
             writer.add_scalar("loss/b_train", loss_per_sample_b.mean(), step)
             writer.add_scalar("loss/d_train", loss_per_sample_d.mean(), step)
 
@@ -250,13 +313,16 @@ def train(
 
             aligned_mask = (label == bias_attr)
             skewed_mask = (label != bias_attr)
-            
+
             writer.add_scalar('loss_variance/b_ema', sample_loss_ema_b.parameter.var(), step)
             writer.add_scalar('loss_std/b_ema', sample_loss_ema_b.parameter.std(), step)
             writer.add_scalar('loss_variance/d_ema', sample_loss_ema_d.parameter.var(), step)
             writer.add_scalar('loss_std/d_ema', sample_loss_ema_d.parameter.std(), step)
 
             if aligned_mask.any().item():
+                loss_per_sample_b = loss_per_sample_b.to(torch.device('cuda'))
+                loss_per_sample_d = loss_per_sample_b.to(torch.device('cuda'))
+                loss_weight = loss_per_sample_b.to(torch.device('cuda'))
                 writer.add_scalar("loss/b_train_aligned", loss_per_sample_b[aligned_mask].mean(), step)
                 writer.add_scalar("loss/d_train_aligned", loss_per_sample_d[aligned_mask].mean(), step)
                 writer.add_scalar('loss_weight/aligned', loss_weight[aligned_mask].mean(), step)
@@ -276,7 +342,7 @@ def train(
             writer.add_scalar("acc/d_valid", valid_accs_d, step)
 
             eye_tsr = torch.eye(attr_dims[0]).long()
-            
+
             writer.add_scalar(
                 "acc/b_valid_aligned",
                 valid_attrwise_accs_b[eye_tsr == 1].mean(),
@@ -297,7 +363,7 @@ def train(
                 valid_attrwise_accs_d[eye_tsr == 0].mean(),
                 step,
             )
-            
+
             num_updated_avg = num_updated / main_batch_size / main_valid_freq
             writer.add_scalar("num_updated/all", num_updated_avg, step)
             num_updated = 0
@@ -306,15 +372,20 @@ def train(
     result_path = os.path.join(log_dir, "result", main_tag, "result.th")
     model_path = os.path.join(log_dir, "result", main_tag, "model.th")
     valid_attrwise_accs_list = torch.stack(valid_attrwise_accs_list)
+    visualise_model_predictions(model_b, valid_loader, device, 'biased_model')
+    plot_confusion_matrix(model_b, valid_loader, device, 'biased_model')
+    visualise_model_predictions(model_d, valid_loader, device, "debiased_model")
+    plot_confusion_matrix(model_d, valid_loader, device, "debiased_model")
+
     with open(result_path, "wb") as f:
         torch.save({"valid/attrwise_accs": valid_attrwise_accs_list}, f)
     state_dict = {
-        'steps': step, 
-        'state_dict': model_d.state_dict(), 
-        'optimizer': optimizer_d.state_dict(), 
+        'steps': step,
+        'state_dict': model_d.state_dict(),
+        'state_dict_gce': model_b.state_dict(),
+        'optimizer': optimizer_d.state_dict(),
     }
     with open(model_path, "wb") as f:
         torch.save(state_dict, f)
-    
-
-
+    artifact.add_file(model_path)
+    wandb.run.log_artifact(artifact)
