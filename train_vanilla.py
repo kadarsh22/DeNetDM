@@ -107,6 +107,7 @@ def train(
         shuffle=False,
         num_workers=16,
         pin_memory=True,
+        drop_last=True
     )
 
     # define model and optimizer
