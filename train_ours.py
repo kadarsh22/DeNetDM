@@ -62,6 +62,7 @@ def train(
         main_learning_rate,
         main_weight_decay,
 ):
+    print(dataset_tag)
     wandb.login()
 
     wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
@@ -101,6 +102,7 @@ def train(
     train_dataset = IdxDataset(train_dataset)
     valid_dataset = IdxDataset(valid_dataset)
 
+    # make loader
     train_loader = DataLoader(
         train_dataset,
         batch_size=main_batch_size,
@@ -112,7 +114,7 @@ def train(
     valid_loader = DataLoader(
         valid_dataset,
         batch_size=256,
-        shuffle=False,
+        shuffle=True,
         num_workers=16,
         pin_memory=True,
         drop_last=True
@@ -120,8 +122,8 @@ def train(
 
     # define model and optimizer
     model = get_model(model_tag, num_classes).to(device)
-    gce_model = get_model("MLP", num_classes).to(device)
-    main_optimizer_tag = "SGD"
+    gce_model = get_model(model_tag, num_classes).to(device)
+
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -147,7 +149,7 @@ def train(
     # define loss
     # criterion = torch.nn.CrossEntropyLoss()
     # label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
-    label_criterion = FocalLoss(gamma=1)
+    label_criterion = FocalLoss(gamma=gamma)
 
     # define evaluation function
     def evaluate(model, data_loader):
@@ -192,21 +194,21 @@ def train(
         ground_truths = torch.stack(ground_truths).cpu().view(-1).numpy()
         predictions = torch.stack(predictions).cpu().view(-1).numpy()
         class_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-        wandb.log({"conf_mat": wandb.plot.confusion_matrix(probs=None,
-                                                           y_true=ground_truths, preds=predictions,
-                                                           class_names=class_names)})
+        wandb.log({"conf_mat": wandb.plot.confusion_matrix(probs=None,y_true=ground_truths, preds=predictions,
+                                                                              class_names=class_names)})
 
     def visualise_model_predictions(model, valid_loader, device):
         data = [(images, torch.max(model(images.to(device)).data, 1)[1]) for index, images, attr in valid_loader]
-        x = torch.stack([d[0] for d in data]).view(-1, 3, 32, 32)  ##TODO
+        img_size = data[0][0].shape[-1]
+        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
         l = torch.stack([d[1] for d in data]).view(-1)
         images = []
         for i in range(10):
             if x[l.cpu() == i][:10].shape[0] == 10:
                 images.append(x[l.cpu() == i][:10])
             else:
-                images.append(torch.zeros((10, 3, 32, 32)))
-        images = torch.stack(images).view(-1, 3, 32, 32)
+                images.append(torch.zeros((10, 3, img_size, img_size)))
+        images = torch.stack(images).view(-1, 3, img_size, img_size)
         grid_img = torchvision.utils.make_grid(images[:100], nrow=10, normalize=False)
         plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
         wandb.log({"predictions": wandb.Image(grid_img)})
@@ -230,10 +232,13 @@ def train(
 
     print(dataset_tag)
     # print('loading gce model from ' + str(gce_model_path))
-    gce_model.load_state_dict(torch.load('pretrained_models/cmnist_vanilla_mlp_gce_0.7/best_model.th')['state_dict'], strict=True)
+    gce_model.load_state_dict(torch.load('/home/user/workspace/debias/log_gce/colored_mnist/result/ColoredMNIST-Skewed0.01-Severity4/model.th')['state_dict'],
+                              strict=True)
     gce_model.eval()
 
     for step in tqdm(range(main_num_steps)):
+
+        # train main model
         try:
             index, data, attr = next(train_iter)
         except:
@@ -293,8 +298,8 @@ def train(
     with open(result_path, "wb") as f:
         torch.save({"valid/attrwise_accs": valid_attrwise_accs_list}, f)
 
-    # visualise_model_predictions(model, valid_loader, device)
-    # plot_confusion_matrix(model, valid_loader, device)
+    visualise_model_predictions(model, valid_loader, device)
+    plot_confusion_matrix(model, valid_loader, device)
     model_path = os.path.join(log_dir, "result", main_tag, "model.th")
     state_dict = {
         'steps': step,

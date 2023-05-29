@@ -186,7 +186,7 @@ def train(
 
         return accs
 
-    def plot_confusion_matrix(model, valid_loader, device):
+    def plot_confusion_matrix(model, valid_loader, device, model_name):
         correct = 0
         total = 0
         ground_truths = []
@@ -204,7 +204,7 @@ def train(
         ground_truths = torch.stack(ground_truths).cpu().view(-1).numpy()
         predictions = torch.stack(predictions).cpu().view(-1).numpy()
         class_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-        wandb.log({"conf_mat": wandb.plot.confusion_matrix(probs=None,
+        wandb.log({str(model_name) + "_conf_mat": wandb.plot.confusion_matrix(probs=None,
                                                            y_true=ground_truths, preds=predictions,
                                                            class_names=class_names)})
 
