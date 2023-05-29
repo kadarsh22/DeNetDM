@@ -46,8 +46,26 @@ def get_config():
 
 
 @ex.named_config
-def server_user():
+def server_user_vanilla():
+    log_dir = "/home/user/workspace/debias/log_vanilla"
+    data_dir = "/home/user/datasets/debias"
+
+
+@ex.named_config
+def server_user_gce():
+    log_dir = "/home/user/workspace/debias/log_gce"
+    data_dir = "/home/user/datasets/debias"
+
+
+@ex.named_config
+def server_user_ours():
     log_dir = "/home/user/workspace/debias/log_ours"
+    data_dir = "/home/user/datasets/debias"
+
+
+@ex.named_config
+def server_user_lff():
+    log_dir = "/home/user/workspace/debias/log_lff"
     data_dir = "/home/user/datasets/debias"
 
 
@@ -160,17 +178,21 @@ def severity4(dataset_tag, main_tag):
     dataset_tag += "-Severity4"
     main_tag += "-Severity4"
 
+
 @ex.named_config
 def gce_model_path1(dataset_tag, main_tag):
     gce_model_path = '/home/user/workspace/debias/log_lff/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.05-Severity1/model.th'
+
 
 @ex.named_config
 def gce_model_path2(dataset_tag, main_tag):
     gce_model_path = '/home/user/workspace/debias/log_lff/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.05-Severity2/model.th'
 
+
 @ex.named_config
 def gce_model_path3(dataset_tag, main_tag):
     gce_model_path = '/home/user/workspace/debias/log_lff/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.05-Severity3/model.th'
+
 
 @ex.named_config
 def gce_model_path4(dataset_tag, main_tag):

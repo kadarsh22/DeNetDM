@@ -107,7 +107,7 @@ def train(
     valid_loader = DataLoader(
         valid_dataset,
         batch_size=256,
-        shuffle=False,
+        shuffle=True,
         num_workers=16,
         pin_memory=True,
         drop_last=True
@@ -116,7 +116,6 @@ def train(
     # define model and optimizer
     model_b = get_model(model_tag, attr_dims[0]).to(device)
     model_d = get_model(model_tag, attr_dims[0]).to(device)
-
     if main_optimizer_tag == "SGD":
         optimizer_b = torch.optim.SGD(
             model_b.parameters(),
@@ -187,7 +186,7 @@ def train(
 
         return accs
 
-    def plot_confusion_matrix(model, valid_loader, device, model_name):
+    def plot_confusion_matrix(model, valid_loader, device):
         correct = 0
         total = 0
         ground_truths = []
@@ -205,24 +204,25 @@ def train(
         ground_truths = torch.stack(ground_truths).cpu().view(-1).numpy()
         predictions = torch.stack(predictions).cpu().view(-1).numpy()
         class_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-        wandb.log({"conf_mat" + str(model_name): wandb.plot.confusion_matrix(probs=None,
-                                                                             y_true=ground_truths, preds=predictions,
-                                                                             class_names=class_names)})
+        wandb.log({"conf_mat": wandb.plot.confusion_matrix(probs=None,
+                                                           y_true=ground_truths, preds=predictions,
+                                                           class_names=class_names)})
 
-    def visualise_model_predictions(model, valid_loader, device, model_name):
+    def visualise_model_predictions(model, valid_loader, device ,model_name):
         data = [(images, torch.max(model(images.to(device)).data, 1)[1]) for index, images, attr in valid_loader]
-        x = torch.stack([d[0] for d in data]).view(-1, 3, 32, 32)  ##TODO
+        img_size = data[0][0].shape[-1]
+        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
         l = torch.stack([d[1] for d in data]).view(-1)
         images = []
         for i in range(10):
             if x[l.cpu() == i][:10].shape[0] == 10:
                 images.append(x[l.cpu() == i][:10])
             else:
-                images.append(torch.zeros((10, 3, 32, 32)))
-        images = torch.stack(images).view(-1, 3, 32, 32)
+                images.append(torch.zeros((10, 3, img_size, img_size)))
+        images = torch.stack(images).view(-1, 3, img_size, img_size)
         grid_img = torchvision.utils.make_grid(images[:100], nrow=10, normalize=False)
         plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
-        wandb.log({"predictions" + str(model_name): wandb.Image(grid_img)})
+        wandb.log({model_name + "_predictions": wandb.Image(grid_img)})
 
     # jointly training biased/de-biased model
     valid_attrwise_accs_list = []

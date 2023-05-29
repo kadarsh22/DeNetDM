@@ -45,7 +45,7 @@ transforms = {
     "ColoredMNIST": {
         "train": T.Compose([T.ToTensor()]),
         "eval": T.Compose([T.ToTensor()])
-    },
+        },
     "CorruptedCIFAR10": {
         "train_aug": T.Compose(
             [

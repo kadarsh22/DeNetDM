@@ -120,7 +120,8 @@ def train(
 
     # define model and optimizer
     model = get_model(model_tag, num_classes).to(device)
-    gce_model = get_model(model_tag, num_classes).to(device)
+    gce_model = get_model("MLP", num_classes).to(device)
+    main_optimizer_tag = "SGD"
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -146,7 +147,7 @@ def train(
     # define loss
     # criterion = torch.nn.CrossEntropyLoss()
     # label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
-    label_criterion = FocalLoss(gamma=gamma)
+    label_criterion = FocalLoss(gamma=1)
 
     # define evaluation function
     def evaluate(model, data_loader):
@@ -228,8 +229,8 @@ def train(
     valid_attrwise_accs_list = []
 
     print(dataset_tag)
-    print('loading gce model from ' + str(gce_model_path))
-    gce_model.load_state_dict(torch.load(gce_model_path)['state_dict_gce'], strict=True)
+    # print('loading gce model from ' + str(gce_model_path))
+    gce_model.load_state_dict(torch.load('pretrained_models/cmnist_vanilla_mlp_gce_0.7/best_model.th')['state_dict'], strict=True)
     gce_model.eval()
 
     for step in tqdm(range(main_num_steps)):
@@ -292,8 +293,8 @@ def train(
     with open(result_path, "wb") as f:
         torch.save({"valid/attrwise_accs": valid_attrwise_accs_list}, f)
 
-    visualise_model_predictions(model, valid_loader, device)
-    plot_confusion_matrix(model, valid_loader, device)
+    # visualise_model_predictions(model, valid_loader, device)
+    # plot_confusion_matrix(model, valid_loader, device)
     model_path = os.path.join(log_dir, "result", main_tag, "model.th")
     state_dict = {
         'steps': step,
