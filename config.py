@@ -43,6 +43,10 @@ def get_config():
 
 
 # User Configuration
+@ex.named_config
+def server_user_lff():
+    log_dir = "/home/user/workspace/debias/log_lff"
+    data_dir = "/home/user/datasets/debias"
 
 
 @ex.named_config
