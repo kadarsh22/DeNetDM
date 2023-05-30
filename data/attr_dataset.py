@@ -3,7 +3,6 @@ import pickle
 import torch
 import numpy as np
 from torch.utils.data import Dataset
-from ccifar10 import CIFAR10Dataset
 
 class AttributeDataset(Dataset):
     def __init__(self, root, split, query_attr_idx=None, transform=None):

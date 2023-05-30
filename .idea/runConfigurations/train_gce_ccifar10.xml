@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="train_vanilla_cmnist" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="train_gce_ccifar10" type="PythonConfigurationType" factoryName="Python">
     <module name="LfF" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -11,8 +11,8 @@
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_vanilla.py" />
-    <option name="PARAMETERS" value="with server_user_vanilla colored_mnist skewed3 severity4" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_gce.py" />
+    <option name="PARAMETERS" value="with server_user_gce corrupted_cifar10 type0 skewed3 severity4" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="true" />
     <option name="MODULE_MODE" value="false" />

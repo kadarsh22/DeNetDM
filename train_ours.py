@@ -232,7 +232,7 @@ def train(
 
     print(dataset_tag)
     # print('loading gce model from ' + str(gce_model_path))
-    gce_model.load_state_dict(torch.load('/home/user/workspace/debias/log_gce/colored_mnist/result/ColoredMNIST-Skewed0.01-Severity4/model.th')['state_dict'],
+    gce_model.load_state_dict(torch.load('/home/user/workspace/debias/log_gce/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.01-Severity4/model.th')['state_dict'],
                               strict=True)
     gce_model.eval()
 

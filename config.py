@@ -62,11 +62,28 @@ def server_user_ours():
     log_dir = "/home/user/workspace/debias/log_ours"
     data_dir = "/home/user/datasets/debias"
 
+@ex.named_config
+def remote_user_vanilla():
+    log_dir = "results/log_vanilla"
+    data_dir = "../data/"
+
 
 @ex.named_config
-def server_user_lff():
-    log_dir = "/home/user/workspace/debias/log_lff"
-    data_dir = "/home/user/datasets/debias"
+def remote_user_gce():
+    log_dir = "results/logs_gce"
+    data_dir = "../data/"
+
+
+@ex.named_config
+def remote_user_ours():
+    log_dir = "results/log_ours"
+    data_dir = "../data/"
+
+
+@ex.named_config
+def remote_user_lff():
+    log_dir = "results/log_lff"
+    data_dir = "../data/"
 
 
 # Dataset Configuration
@@ -99,7 +116,7 @@ def corrupted_cifar10(log_dir):
 
 
 @ex.named_config
-def celeba(log_dir, target_attr_idx, bias_attr_idx):
+def celeba(log_dir):
     dataset_tag = 'CelebA'
     model_tag = 'ResNet18'
     target_attr_idx = 9

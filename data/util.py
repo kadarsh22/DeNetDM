@@ -105,8 +105,6 @@ transforms = {
     },
 }
 
-from ccifar10 import CIFAR10Dataset
-
 
 def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
     dataset_category = dataset_tag.split("-")[0]
@@ -114,7 +112,7 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
     transform = transforms[dataset_category][transform_split]
     dataset_split = "valid" if (dataset_split == "eval") else dataset_split
     if dataset_tag == "CelebA":
-        celeba_root = '/home/xxxx/datasets/CelebA'
+        celeba_root = '../data/'
         dataset = CelebA(
             root=celeba_root,
             split=dataset_split,
@@ -122,8 +120,6 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
             transform=transform,
         )
     else:
-        # dataset = CIFAR10Dataset(
-        #     root=root, split=dataset_split, transform=transform)
         dataset = AttributeDataset(
             root=root, split=dataset_split, transform=transform
         )
