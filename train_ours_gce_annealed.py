@@ -1,5 +1,7 @@
 import os
 import pickle
+import sys
+
 from tqdm import tqdm
 from datetime import datetime
 import wandb
@@ -25,7 +27,7 @@ from config import ex
 from data.util import get_dataset, IdxDataset, ZippedDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
-from module.loss import GeneralizedCELoss
+from loss import FocalLoss
 
 
 def set_seed(seed: int = 42) -> None:
@@ -49,6 +51,8 @@ def train(
         data_dir,
         log_dir,
         device,
+        gamma,
+        gce_model_path,
         target_attr_idx,
         bias_attr_idx,
         main_num_steps,
@@ -58,16 +62,18 @@ def train(
         main_learning_rate,
         main_weight_decay,
 ):
+    print(dataset_tag)
     wandb.login()
 
     wandb.init(project="bias_mitigation_server", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "gce_" + str(dataset_tag)
+    wandb.run.name = "ours_" + str(dataset_tag) + "_" + 'gamma_annealed' + str(gamma)
     wandb.run.log_code(".")
-    wandb.config.update({"dataset_tag": dataset_tag, "algorithm": 'gce'})
+    wandb.config.update({"dataset_tag": dataset_tag,
+                         "gamma": gamma, "algorithm": "ours"})
     artifact = wandb.Artifact(wandb.run.name, type='model')
-    set_seed()
 
+    set_seed()
     device = torch.device(device)
     start_time = datetime.now()
     writer = SummaryWriter(os.path.join(log_dir, "summary", main_tag))
@@ -96,13 +102,13 @@ def train(
     train_dataset = IdxDataset(train_dataset)
     valid_dataset = IdxDataset(valid_dataset)
 
+    # make loader
     train_loader = DataLoader(
         train_dataset,
         batch_size=main_batch_size,
         shuffle=True,
         num_workers=16,
         pin_memory=True,
-        drop_last=True
     )
 
     valid_loader = DataLoader(
@@ -116,6 +122,7 @@ def train(
 
     # define model and optimizer
     model = get_model(model_tag, num_classes).to(device)
+    gce_model = get_model(model_tag, num_classes).to(device)
 
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
@@ -140,7 +147,9 @@ def train(
         raise NotImplementedError
 
     # define loss
-    label_criterion = GeneralizedCELoss(q=0.7)
+    # criterion = torch.nn.CrossEntropyLoss()
+    # label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
+    label_criterion = FocalLoss(gamma=gamma)
 
     # define evaluation function
     def evaluate(model, data_loader):
@@ -185,8 +194,7 @@ def train(
         ground_truths = torch.stack(ground_truths).cpu().view(-1).numpy()
         predictions = torch.stack(predictions).cpu().view(-1).numpy()
         class_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-        wandb.log({"conf_mat": wandb.plot.confusion_matrix(probs=None,
-                                                           y_true=ground_truths, preds=predictions,
+        wandb.log({"conf_mat": wandb.plot.confusion_matrix(probs=None, y_true=ground_truths, preds=predictions,
                                                            class_names=class_names)})
 
     def visualise_model_predictions(model, valid_loader, device):
@@ -205,29 +213,13 @@ def train(
         plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
         wandb.log({"predictions": wandb.Image(grid_img)})
 
-    def visualise_training_data(loader, target_attr_idx):
-        data = [(images, attr[:, target_attr_idx]) for index, images, attr in loader]
-        img_size = data[0][0].shape[-1]
-        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
-        l = torch.stack([d[1] for d in data]).view(-1)
-        images = []
-        for i in range(10):
-            images.append(x[l == i][:10])
-        images = torch.stack(images).view(-1, 3, img_size, img_size)
-        grid_img = torchvision.utils.make_grid(images[:100].squeeze(1), nrow=10, normalize=True)
-        wandb.log({"training_data": wandb.Image(grid_img)})
-
-    def visualise_testing_data(loader, target_attr_idx):
-        data = [(images, attr[:, target_attr_idx]) for index, images, attr in loader]
-        img_size = data[0][0].shape[-1]
-        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
-        l = torch.stack([d[1] for d in data]).view(-1)
-        images = []
-        for i in range(10):
-            images.append(x[l == i][:10])
-        images = torch.stack(images).view(-1, 3, img_size, img_size)
-        grid_img = torchvision.utils.make_grid(images[:100].squeeze(1), nrow=10, normalize=True)
-        wandb.log({"testing_data": wandb.Image(grid_img)})
+    def linear_annealing(init, fin, step, init_annealing_steps, annealing_steps):
+        """Linear annealing of a parameter."""
+        if annealing_steps == 0:
+            return fin
+        delta = fin - init
+        annealed = min(init + delta * (step - init_annealing_steps) / annealing_steps, fin)
+        return annealed
 
     # define extracting indices function
     def get_align_skew_indices(lookup_list, indices):
@@ -245,9 +237,23 @@ def train(
         return aligned_indices, skewed_indices
 
     valid_attrwise_accs_list = []
-    visualise_training_data(train_loader, target_attr_idx)
-    visualise_testing_data(valid_loader, target_attr_idx)
+
+    print(dataset_tag)
+    # print('loading gce model from ' + str(gce_model_path))
+    gce_model.load_state_dict(torch.load(
+        '/home/prathosh/LfF/results/logs_gce/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.01-Severity4/model.th')[
+                                  'state_dict'],
+                              strict=True)
+    gce_model.eval()
+
+    init = 0
+    init_annealing_steps = 10000
+    annealing_steps = 39200
+    final = 1
+
     for step in tqdm(range(main_num_steps)):
+
+        # train main model
         try:
             index, data, attr = next(train_iter)
         except:
@@ -260,18 +266,23 @@ def train(
         label = attr[:, target_attr_idx]
 
         logit = model(data)
-        loss_per_sample = label_criterion(logit.squeeze(1), label)
+        x_ref = gce_model(data)
+        loss_per_sample = label_criterion(logit.squeeze(1), label, x_ref)
 
         loss = loss_per_sample.mean()
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        if step > init_annealing_steps:
+            annealed_gamma = linear_annealing(init, final, step, init_annealing_steps, annealing_steps)
+            label_criterion.gamma = annealed_gamma
 
         main_log_freq = 10
-        if step % main_log_freq == 0:
+        if step % main_log_freq == 0 and step != 0:
             loss = loss.detach().cpu()
             writer.add_scalar("loss/train", loss, step)
+            writer.add_scalar("gamma", label_criterion.gamma, step)
 
             bias_attr = attr[:, bias_attr_idx]  # oracle
             loss_per_sample = loss_per_sample.detach()

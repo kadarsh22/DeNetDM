@@ -61,7 +61,7 @@ def train(
     print(dataset_tag)
     wandb.login()
 
-    wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
+    wandb.init(project="bias_mitigation_server", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
     wandb.run.name = "lff_" + str(dataset_tag)
     wandb.run.log_code(".")

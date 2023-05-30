@@ -60,10 +60,14 @@ def server_user_gce():
     log_dir = "/home/user/workspace/debias/log_gce"
     data_dir = "/home/user/datasets/debias"
 
-
 @ex.named_config
 def server_user_ours():
     log_dir = "/home/user/workspace/debias/log_ours"
+    data_dir = "/home/user/datasets/debias"
+
+@ex.named_config
+def server_user_ours_simul_gce_focal():
+    log_dir = "/home/user/workspace/debias/log_ours_simul_gce_focal"
     data_dir = "/home/user/datasets/debias"
 
 @ex.named_config
@@ -83,6 +87,10 @@ def remote_user_ours():
     log_dir = "results/log_ours"
     data_dir = "../data/"
 
+@ex.named_config
+def remote_user_ours_simul_gce_focal():
+    log_dir = "results/log_ours_simul_gce_focal"
+    data_dir = "../data/"
 
 @ex.named_config
 def remote_user_lff():
@@ -255,6 +263,9 @@ def reverse(main_tag):
     target_attr_idx = 1
     bias_attr_idx = 0
 
+@ex.named_config
+def gamma0(dataset_tag, main_tag):
+    gamma = 0
 
 @ex.named_config
 def gamma1(dataset_tag, main_tag):

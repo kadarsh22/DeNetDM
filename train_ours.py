@@ -65,7 +65,7 @@ def train(
     print(dataset_tag)
     wandb.login()
 
-    wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
+    wandb.init(project="bias_mitigation_server", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
     wandb.run.name = "ours_" + str(dataset_tag) + "_" + 'gamma' + str(gamma)
     wandb.run.log_code(".")
@@ -232,7 +232,7 @@ def train(
 
     print(dataset_tag)
     # print('loading gce model from ' + str(gce_model_path))
-    gce_model.load_state_dict(torch.load('/home/user/workspace/debias/log_gce/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.01-Severity4/model.th')['state_dict'],
+    gce_model.load_state_dict(torch.load('/home/prathosh/LfF/results/logs_gce/colored_mnist/result/ColoredMNIST-Skewed0.01-Severity4/model.th')['state_dict'],
                               strict=True)
     gce_model.eval()
 
