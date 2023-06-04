@@ -14,6 +14,7 @@ from torchvision import transforms as T
 import torch.nn.functional as F
 import torchvision
 import matplotlib.pyplot as plt
+import sys
 
 import warnings
 
@@ -61,7 +62,7 @@ def train(
 
     wandb.init(project="bias_mitigation_server", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "vanilla_" + str(dataset_tag)
+    wandb.run.name = "vanilla_with_skip_act_evaluation_only_feat" + str(dataset_tag)
     wandb.run.log_code(".")
     wandb.config.update({"dataset_tag": dataset_tag, "algorithm": 'vanilla'})
     artifact = wandb.Artifact(wandb.run.name, type='model')
@@ -114,6 +115,10 @@ def train(
 
     # define model and optimizer
     model = get_model(model_tag, num_classes).to(device)
+    # model.load_state_dict(torch.load('results/log_vanilla/colored_mnist/result/ColoredMNIST-Skewed0.01-Severity4/model.th')['state_dict'], strict=True)
+    # model.load_state_dict(torch.load('/home/prathosh/LfF/artifacts/vanilla_CorruptedCIFAR10-Type0-Skewed0.01-Severity4:v1/model.th')['state_dict'],
+                            #   strict=True)
+
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -137,11 +142,11 @@ def train(
         raise NotImplementedError
 
     # define loss
-    criterion = torch.nn.CrossEntropyLoss()
+
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
     # define evaluation function
-    def evaluate(model, data_loader):
+    def evaluate(model, data_loader, skip_weight=1, feat_weight=1):
         model.eval()
         acc = 0
         attrwise_acc_meter = MultiDimAverageMeter(attr_dims)
@@ -151,7 +156,7 @@ def train(
             attr = attr.to(device)
             label = label.to(device)
             with torch.no_grad():
-                logit = model(data)
+                logit = model(data, skip_weight=skip_weight, feat_weight=feat_weight)
                 pred = logit.data.max(1, keepdim=True)[1].squeeze(1)
                 correct = (pred == label).long()
 
@@ -219,7 +224,16 @@ def train(
         return aligned_indices, skewed_indices
 
     valid_attrwise_accs_list = []
+    # step = 0
 
+    # valid_attrwise_accs = evaluate(model, valid_loader, skip_weight=0, feat_weight=1)
+    # valid_attrwise_accs_list.append(valid_attrwise_accs)
+    # valid_accs = torch.mean(valid_attrwise_accs)
+    # writer.add_scalar("acc/valid", valid_accs, step)
+    # eye_tsr = torch.eye(num_classes)
+    # writer.add_scalar("acc/valid_aligned",valid_attrwise_accs[eye_tsr > 0.0].mean(),step)
+    # writer.add_scalar("acc/valid_skewed", valid_attrwise_accs[eye_tsr == 0.0].mean(),step)
+    # sys.exit()
     for step in tqdm(range(main_num_steps)):
         try:
             index, data, attr = next(train_iter)

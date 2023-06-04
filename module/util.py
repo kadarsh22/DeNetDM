@@ -1,6 +1,6 @@
 import torch.nn as nn
 from module.resnet import resnet20
-from module.mlp import MLP
+from module.mlp import MLP , MLP_Skip
 from torchvision.models import resnet18, resnet50
 
 
@@ -25,5 +25,7 @@ def get_model(model_tag, num_classes):
         return model
     elif model_tag == "MLP":
         return MLP(num_classes=num_classes)
+    elif model_tag == "MLP_Skip":
+        return MLP_Skip(num_classes=num_classes)
     else:
         raise NotImplementedError
