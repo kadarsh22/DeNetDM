@@ -103,7 +103,7 @@ def remote_user_lff():
 @ex.named_config
 def colored_mnist(log_dir):
     dataset_tag = "ColoredMNIST"
-    model_tag = "MLP_Skip"
+    model_tag = "Lenet"
     main_num_steps = 235 * 100
     target_attr_idx = 0
     bias_attr_idx = 1

@@ -1,10 +1,11 @@
 import torch.nn as nn
 from module.resnet import resnet20
 from module.mlp import MLP , MLP_Skip
+from module.lenet import LeNet4
 from torchvision.models import resnet18, resnet50
 
 
-def get_model(model_tag, num_classes):
+def get_model(model_tag, num_classes, num_layers=4):
     if model_tag == "ResNet20":
         return resnet20(num_classes)
     elif model_tag == "ResNet18":
@@ -26,6 +27,8 @@ def get_model(model_tag, num_classes):
     elif model_tag == "MLP":
         return MLP(num_classes=num_classes)
     elif model_tag == "MLP_Skip":
-        return MLP_Skip(num_classes=num_classes)
+        return MLP_Skip(num_layers=num_layers, num_classes=num_classes)
+    elif model_tag == 'Lenet':
+        return LeNet4(num_classes = num_classes)
     else:
         raise NotImplementedError
