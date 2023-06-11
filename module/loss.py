@@ -1,10 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 import numpy as np
 
-        
+
+class CosineSimilarityLoss(nn.Module):
+
+    def __init__(self):
+        super(CosineSimilarityLoss, self).__init__()
+
+    def forward(self, feat1, feat2):
+        # minimize average cosine similarity
+        return F.cosine_similarity(feat1, feat2).abs()
+    
 class GeneralizedCELoss(nn.Module):
 
     def __init__(self, q=0.7):
