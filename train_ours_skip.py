@@ -129,7 +129,7 @@ def train(
 
     # define model and optimizer
     model = get_model(model_tag, num_classes).to(device)
-    model.load_state_dict(torch.load('pretrained_models/vanilla_skip_best/model.th')['state_dict'], strict=True)
+    # model.load_state_dict(torch.load('pretrained_models/vanilla_skip_best/model.th')['state_dict'], strict=True)
 
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
@@ -264,7 +264,7 @@ def train(
 
         data = data.to(device)
         attr = attr.to(device)
-
+        model.zero_grad()
         label = attr[:, target_attr_idx]
 
         ## get x_ref
@@ -280,7 +280,22 @@ def train(
 
         optimizer.zero_grad()
         loss.backward()
+        optimizer.step()
 
+        ## get x_ref
+        model.zero_grad()
+        model.skip_weight = 1
+        model.feature_weight = 0
+        x_ref = model(data)
+
+        model.skip_weight = 0
+        model.feature_weight = 1
+        logit = model(data)
+        loss_per_sample = focal_criterion(logit.squeeze(1), label, x_ref.detach())
+        loss = loss_per_sample.mean()
+
+        optimizer.zero_grad()
+        loss.backward()
         optimizer.step()
 
         main_log_freq = 10
