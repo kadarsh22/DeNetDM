@@ -43,8 +43,8 @@ class ZippedDataset(Dataset):
 
 transforms = {
     "ColoredMNIST": {
-        "train": T.Compose([T.ToTensor()]),
-        "eval": T.Compose([T.ToTensor()])
+        "train": T.Compose([T.ToPILImage(),T.Resize((32,32)),T.ToTensor()]),
+        "eval": T.Compose([T.ToPILImage(),T.Resize((32,32)),T.ToTensor()])
         },
     "CorruptedCIFAR10": {
         "train_aug": T.Compose(
