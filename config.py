@@ -103,7 +103,7 @@ def remote_user_lff():
 @ex.named_config
 def colored_mnist(log_dir):
     dataset_tag = "ColoredMNIST"
-    model_tag = "MLP_Skip"
+    model_tag = 'Product_Of_Experts'
     main_num_steps = 235 * 100
     target_attr_idx = 0
     bias_attr_idx = 1
@@ -133,7 +133,7 @@ def celeba(log_dir):
     model_tag = 'ResNet18'
     target_attr_idx = 9
     bias_attr_idx = 20
-    main_num_steps = 636 * 200
+    main_num_steps = 75 * 200
     main_valid_freq = 636
     main_batch_size = 256
     main_learning_rate = 1e-4
@@ -208,25 +208,6 @@ def severity4(dataset_tag, main_tag):
     main_tag += "-Severity4"
 
 
-@ex.named_config
-def gce_model_path1(dataset_tag, main_tag):
-    gce_model_path = '/home/user/workspace/debias/log_lff/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.05-Severity1/model.th'
-
-
-@ex.named_config
-def gce_model_path2(dataset_tag, main_tag):
-    gce_model_path = '/home/user/workspace/debias/log_lff/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.05-Severity2/model.th'
-
-
-@ex.named_config
-def gce_model_path3(dataset_tag, main_tag):
-    gce_model_path = '/home/user/workspace/debias/log_lff/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.05-Severity3/model.th'
-
-
-@ex.named_config
-def gce_model_path4(dataset_tag, main_tag):
-    gce_model_path = '/home/user/workspace/debias/log_lff/corrupted_cifar/result/CorruptedCIFAR10-Type0-Skewed0.05-Severity4/model.th'
-
 
 # Method Configuration
 
@@ -263,35 +244,3 @@ def reverse(main_tag):
     target_attr_idx = 1
     bias_attr_idx = 0
 
-@ex.named_config
-def gamma0(dataset_tag, main_tag):
-    gamma = 0
-
-@ex.named_config
-def gamma1(dataset_tag, main_tag):
-    gamma = 1
-
-
-@ex.named_config
-def gamma2(dataset_tag, main_tag):
-    gamma = 2
-
-
-@ex.named_config
-def gamma4(dataset_tag, main_tag):
-    gamma = 4
-
-
-@ex.named_config
-def gamma8(dataset_tag, main_tag):
-    gamma = 8
-
-
-@ex.named_config
-def gamma16(dataset_tag, main_tag):
-    gamma = 16
-
-
-@ex.named_config
-def gamma32(dataset_tag, main_tag):
-    gamma = 32

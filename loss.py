@@ -79,6 +79,7 @@ class FocalLoss(nn.Module):
         # get true class column from each row
         all_rows = torch.arange(len(x))
         log_pt = lop_p_ref[all_rows, y]
+        # log_pt = log_p[all_rows, y]
 
         # compute focal term: (1 - pt)^gamma
         pt = log_pt.exp()

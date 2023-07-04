@@ -42,6 +42,10 @@ class ZippedDataset(Dataset):
 
 
 transforms = {
+    # "ColoredMNIST": {
+    #     "train": T.Compose([T.ToTensor()]),
+    #     "eval": T.Compose([T.ToTensor()])
+    #     },
     "ColoredMNIST": {
         "train": T.Compose([T.ToPILImage(),T.Resize((32,32)),T.ToTensor()]),
         "eval": T.Compose([T.ToPILImage(),T.Resize((32,32)),T.ToTensor()])
@@ -112,7 +116,7 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
     transform = transforms[dataset_category][transform_split]
     dataset_split = "valid" if (dataset_split == "eval") else dataset_split
     if dataset_tag == "CelebA":
-        celeba_root = '../data/'
+        celeba_root = '/home/prathosh/data'
         dataset = CelebA(
             root=celeba_root,
             split=dataset_split,

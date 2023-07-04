@@ -8,13 +8,9 @@ import random
 import numpy as np
 
 import torch
-from torch.utils.data import DataLoader, RandomSampler, BatchSampler, WeightedRandomSampler
-from torch.utils.data.dataset import Subset
-from torchvision import transforms as T
-import torch.nn.functional as F
+from torch.utils.data import DataLoader
 import torchvision
 import matplotlib.pyplot as plt
-import sys
 
 import warnings
 
@@ -22,10 +18,14 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
     from torch.utils.tensorboard import SummaryWriter
 
+from module.loss import CosineSimilarityLoss
 from config import ex
 from data.util import get_dataset, IdxDataset, ZippedDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
+import torch.nn as nn
+from loss import FocalLoss
+from module.loss import GeneralizedCELoss
 
 
 def set_seed(seed: int = 42) -> None:
@@ -60,9 +60,9 @@ def train(
 ):
     wandb.login()
 
-    wandb.init(project="bias_mitigation_server", entity="causality-and-robustness-of-classifiers",
+    wandb.init(project="inductive_bias_analysis", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "vanilla_" + str(dataset_tag)
+    wandb.run.name = "train_vanilla_skip_poe_best"
     wandb.run.log_code(".")
     wandb.config.update({"dataset_tag": dataset_tag, "algorithm": 'vanilla'})
     artifact = wandb.Artifact(wandb.run.name, type='model')
@@ -79,6 +79,13 @@ def train(
         transform_split="train"
     )
 
+    align_dataset = get_dataset(
+        dataset_tag,
+        data_dir=data_dir,
+        dataset_split="train",
+        transform_split="train"
+    )
+
     valid_dataset = get_dataset(
         dataset_tag,
         data_dir=data_dir,
@@ -88,9 +95,7 @@ def train(
 
     train_target_attr = train_dataset.attr[:, target_attr_idx]
     train_bias_attr = train_dataset.attr[:, bias_attr_idx]
-    attr_dims = []
-    attr_dims.append(torch.max(train_target_attr).item() + 1)
-    attr_dims.append(torch.max(train_bias_attr).item() + 1)
+    attr_dims = [torch.max(train_target_attr).item() + 1, torch.max(train_bias_attr).item() + 1]
     num_classes = attr_dims[0]
 
     train_dataset = IdxDataset(train_dataset)
@@ -101,7 +106,15 @@ def train(
         batch_size=main_batch_size,
         shuffle=True,
         num_workers=16,
-        pin_memory=True,
+        drop_last=True
+    )
+
+    align_loader = DataLoader(
+        align_dataset,
+        batch_size=main_batch_size,
+        shuffle=True,
+        num_workers=16,
+        drop_last=True
     )
 
     valid_loader = DataLoader(
@@ -109,13 +122,11 @@ def train(
         batch_size=256,
         shuffle=True,
         num_workers=16,
-        pin_memory=True,
         drop_last=True
     )
 
     # define model and optimizer
-    model = get_model(model_tag, num_classes).to(device)
-    # model.load_state_dict(torch.load('results/log_vanilla/colored_mnist/result/ColoredMNIST-Skewed0.01-Severity4/model.th')['state_dict'], strict=True)
+    model = get_model(model_tag, num_classes, num_layers=5).to(device)
 
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
@@ -139,17 +150,17 @@ def train(
     else:
         raise NotImplementedError
 
-    # define loss
-
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
-
+    debias_criterion = FocalLoss(gamma=1)
+    bias_criterion = GeneralizedCELoss() 
+    print(model)
     # define evaluation function
-    def evaluate(model, data_loader, idx):
+    def evaluate(model, data_loader):
         model.eval()
         acc = 0
         attrwise_acc_meter = MultiDimAverageMeter(attr_dims)
         for index, data, attr in tqdm(data_loader, leave=False):
-            label = attr[:, idx]
+            label = attr[:, target_attr_idx]
             data = data.to(device)
             attr = attr.to(device)
             label = label.to(device)
@@ -168,7 +179,7 @@ def train(
 
         return accs
 
-    def plot_confusion_matrix(model, valid_loader, device):
+    def plot_confusion_matrix(model, valid_loader, device, name):
         correct = 0
         total = 0
         ground_truths = []
@@ -186,17 +197,33 @@ def train(
         ground_truths = torch.stack(ground_truths).cpu().view(-1).numpy()
         predictions = torch.stack(predictions).cpu().view(-1).numpy()
         class_names = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
-        wandb.log({"conf_mat": wandb.plot.confusion_matrix(probs=None,
-                                                           y_true=ground_truths, preds=predictions,
-                                                           class_names=class_names)})
+        wandb.log({str(name): wandb.plot.confusion_matrix(probs=None,
+                                                          y_true=ground_truths, preds=predictions,
+                                                          class_names=class_names)})
 
-    def visualise_model_predictions(model, valid_loader, device):
-        data = [(images, torch.max(model(images.to(device)).data, 1)[1]) for index, images, attr in valid_loader]
+    def visualise_training_data(loader, target_attr_idx):
+            data = [(images, attr[:, target_attr_idx]) for index, images, attr in loader]
+            img_size = data[0][0].shape[-1]
+            x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
+            l = torch.stack([d[1] for d in data]).view(-1)
+            images = []
+            for i in range(10):
+                images.append(x[l == i][:10])
+            images = torch.stack(images).view(-1, 3, img_size, img_size)
+            grid_img = torchvision.utils.make_grid(images[:100].squeeze(1), nrow=10, normalize=True)
+            wandb.log({"training_data": wandb.Image(grid_img)})
+
+    def visualise_model_predictions(model, valid_loader, device, plot_name):
+        if plot_name == "predictions-aligned_data-skip" or plot_name == "predictions-aligned_data-feature" or plot_name == "predictions-aligned_data":
+            data = [(images, torch.max(model(images.to(device)).data, 1)[1]) for images, attr in valid_loader]
+        else:
+            data = [(images, torch.max(model(images.to(device)).data, 1)[1]) for index, images, attr in valid_loader]
+
         img_size = data[0][0].shape[-1]
-        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)  
+        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
         l = torch.stack([d[1] for d in data]).view(-1)
         images = []
-        for i in range(10):
+        for i in range(2):
             if x[l.cpu() == i][:10].shape[0] == 10:
                 images.append(x[l.cpu() == i][:10])
             else:
@@ -204,7 +231,7 @@ def train(
         images = torch.stack(images).view(-1, 3, img_size, img_size)
         grid_img = torchvision.utils.make_grid(images[:100], nrow=10, normalize=False)
         plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
-        wandb.log({"predictions": wandb.Image(grid_img)})
+        wandb.log({plot_name: wandb.Image(grid_img)})
 
     # define extracting indices function
     def get_align_skew_indices(lookup_list, indices):
@@ -222,6 +249,9 @@ def train(
         return aligned_indices, skewed_indices
 
     valid_attrwise_accs_list = []
+    wandb.watch(model, log='all', log_freq=100)
+    visualise_training_data(train_loader, target_attr_idx)
+
 
     for step in tqdm(range(main_num_steps)):
         try:
@@ -232,12 +262,11 @@ def train(
 
         data = data.to(device)
         attr = attr.to(device)
-
         label = attr[:, target_attr_idx]
 
         logit = model(data)
+        
         loss_per_sample = label_criterion(logit.squeeze(1), label)
-
         loss = loss_per_sample.mean()
 
         optimizer.zero_grad()
@@ -260,38 +289,41 @@ def train(
                 writer.add_scalar("loss/train_skewed", skewed_loss, step)
 
         if step % main_valid_freq == 0:
-            valid_attrwise_accs = evaluate(model, valid_loader, target_attr_idx)
-            valid_attrwise_accs_list.append(valid_attrwise_accs)
-            valid_accs = torch.mean(valid_attrwise_accs)
-            writer.add_scalar("acc/valid_target", valid_accs, step)
-            eye_tsr = torch.eye(num_classes)
-            writer.add_scalar(
-                "acc/valid_aligned_target",
-                valid_attrwise_accs[eye_tsr > 0.0].mean(),
-                step
-            )
-            writer.add_scalar(
-                "acc/valid_skewed_target",
-                valid_attrwise_accs[eye_tsr == 0.0].mean(),
-                step
-            )
+            # valid_attrwise_accs = evaluate(model, valid_loader)
+            # valid_attrwise_accs_list.append(valid_attrwise_accs)
+            # valid_accs = torch.mean(valid_attrwise_accs)
+            # writer.add_scalar("acc/valid", valid_accs, step)
+            
+            # writer.add_scalar(
+            #     "acc/valid_aligned",
+            #     valid_attrwise_accs[eye_tsr > 0.0].mean(),
+            #     step
+            # )
+            # writer.add_scalar(
+            #     "acc/valid_skewed",
+            #     valid_attrwise_accs[eye_tsr == 0.0].mean(),
+            #     step
+            # )
 
-            valid_attrwise_accs = evaluate(model, valid_loader, bias_attr_idx)
-            valid_attrwise_accs_list.append(valid_attrwise_accs)
-            valid_accs = torch.mean(valid_attrwise_accs)
-            writer.add_scalar("acc/valid_bias", valid_accs, step)
             eye_tsr = torch.eye(num_classes)
-            writer.add_scalar(
-                "acc/valid_aligned_bias",
-                valid_attrwise_accs[eye_tsr > 0.0].mean(),
-                step
-            )
-            writer.add_scalar(
-                "acc/valid_skewed_bias",
-                valid_attrwise_accs[eye_tsr == 0.0].mean(),
-                step
-            )
+            model.skip_weight =1
+            model.feature_weight=0
+            valid_attrwise_accs = evaluate(model, valid_loader)
+            valid_accs = torch.mean(valid_attrwise_accs)
+            wandb.log({"acc/valid-branch2": valid_accs.item()})
+            wandb.log({"acc/valid_aligned-branch2": valid_attrwise_accs[eye_tsr > 0.0].mean()})
+            wandb.log({"acc/valid_skewed-branch2": valid_attrwise_accs[eye_tsr == 0.0].mean()})
 
+            model.skip_weight = 0
+            model.feature_weight= 1
+            valid_attrwise_accs = evaluate(model, valid_loader)
+            valid_accs = torch.mean(valid_attrwise_accs)
+            wandb.log({"acc/valid-branch1": valid_accs.item()})
+            wandb.log({"acc/valid_aligned-branch1": valid_attrwise_accs[eye_tsr > 0.0].mean()})
+            wandb.log({"acc/valid_skewed-branch1": valid_attrwise_accs[eye_tsr == 0.0].mean()})
+
+            model.skip_weight = 1
+            model.feature_weight= 1
 
     os.makedirs(os.path.join(log_dir, "result", main_tag), exist_ok=True)
     result_path = os.path.join(log_dir, "result", main_tag, "result.th")
@@ -299,15 +331,42 @@ def train(
     with open(result_path, "wb") as f:
         torch.save({"valid/attrwise_accs": valid_attrwise_accs_list}, f)
 
-    visualise_model_predictions(model, valid_loader, device)
-    plot_confusion_matrix(model, valid_loader, device)
-    model_path = os.path.join(log_dir, "result", main_tag, "model.th")
-    state_dict = {
-        'steps': step,
-        'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
-    }
-    with open(model_path, "wb") as f:
-        torch.save(state_dict, f)
-    artifact.add_file(model_path)
-    wandb.run.log_artifact(artifact)
+    #  model_analysis
+    # visualise_model_predictions(model, valid_loader, device, "predictions")
+    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data")
+    # plot_confusion_matrix(model, valid_loader, device, "overall")
+
+    # # individual component analysis
+    # model.skip_weight = 1
+    # model.feature_weight = 0
+    # visualise_model_predictions(model, valid_loader, device, "predictions-skip")
+    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
+    # plot_confusion_matrix(model, valid_loader, device, "skip-only")
+    # valid_attrwise_accs = evaluate(model, valid_loader)
+    # valid_accs = torch.mean(valid_attrwise_accs)
+    # wandb.log({"acc/valid-skip": valid_accs.item()})
+    # wandb.log({"acc/valid_aligned-skip": valid_attrwise_accs[eye_tsr > 0.0].mean()})
+    # wandb.log({"acc/valid_skewed-skip": valid_attrwise_accs[eye_tsr == 0.0].mean()})
+
+    # # individual component analysis
+    # model.skip_weight = 0
+    # model.feature_weight = 1
+    # visualise_model_predictions(model, valid_loader, device, "predictions-feature")
+    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
+    # plot_confusion_matrix(model, valid_loader, device, "feature_only")
+    # valid_attrwise_accs = evaluate(model, valid_loader)
+    # valid_accs = torch.mean(valid_attrwise_accs)
+    # wandb.log({"acc/valid-feature": valid_accs.item()})
+    # wandb.log({"acc/valid_aligned-feature": valid_attrwise_accs[eye_tsr > 0.0].mean()})
+    # wandb.log({"acc/valid_skewed-feature": valid_attrwise_accs[eye_tsr == 0.0].mean()})
+
+    # model_path = os.path.join(log_dir, "result", main_tag, "model.th")
+    # state_dict = {
+    #     'steps': step,
+    #     'state_dict': model.state_dict(),
+    #     'optimizer': optimizer.state_dict(),
+    # }
+    # with open(model_path, "wb") as f:
+    #     torch.save(state_dict, f)
+    # artifact.add_file(model_path)
+    # wandb.run.log_artifact(artifact)

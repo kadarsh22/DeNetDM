@@ -45,3 +45,10 @@ class EMA:
     def max_loss(self, label):
         label_index = np.where(self.label == label)[0]
         return self.parameter[label_index].max()
+
+def add_identifier_to_keys(dictionary, identifier):
+    modified_dict = {}
+    for key, value in dictionary.items():
+        modified_key = f"{identifier}_{key}"
+        modified_dict[modified_key] = value
+    return modified_dict
