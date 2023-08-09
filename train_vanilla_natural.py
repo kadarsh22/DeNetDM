@@ -5,8 +5,8 @@ import wandb
 import random
 from data.bffhq import bFFHQDataset
 from torchvision import transforms as T
-from torchvision.models import resnet18
-from module.mlp import MLP_Skip
+from module.mlp import Vanilla
+import torch.nn as nn
 
 import numpy as np
 
@@ -22,8 +22,6 @@ with warnings.catch_warnings():
     from torch.utils.tensorboard import SummaryWriter
 
 from config import ex
-from data.util import get_dataset, IdxDataset, ZippedDataset
-from module.util import get_model
 from util import MultiDimAverageMeter
 
 
@@ -61,14 +59,13 @@ def train(
 
     wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "vanilla_bffhq_scratch"
+    wandb.run.name = "vanilla_bffhq"
     wandb.run.log_code(".")
     wandb.config.update({"dataset_tag": dataset_tag, "algorithm": 'vanilla'})
     artifact = wandb.Artifact(wandb.run.name, type='model')
     set_seed()
 
     device = torch.device(device)
-    start_time = datetime.now()
     writer = SummaryWriter(os.path.join(log_dir, "summary", main_tag))
 
     train_transform = T.Compose([
@@ -85,29 +82,25 @@ def train(
         T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ]
     )
-    train_dataset = bFFHQDataset(
-        '/home/prathosh/data/bffhq', 'train', transform=train_transform)
-
-    valid_dataset = bFFHQDataset('/home/prathosh/data/bffhq/', 'valid', transform=test_transform)
-    test_dataset = bFFHQDataset('/home/prathosh/data/bffhq', 'test', transform=test_transform)
+    train_dataset = bFFHQDataset(data_dir, 'train', transform=train_transform)
+    test_dataset = bFFHQDataset(data_dir, 'test', transform=test_transform)
 
     attr_dims = [2, 2]
     target_attr_idx = bFFHQDataset.target_attr_index
     bias_attr_idx = bFFHQDataset.bias_attr_index
 
-    num_classes = 1
+    num_classes = 2
     attr_dims = attr_dims
     eye_tsr = torch.eye(attr_dims[0]).long()
 
     train_loader = DataLoader(train_dataset, batch_size=main_batch_size, shuffle=True)
-    val_loader = DataLoader(valid_dataset, batch_size=main_batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=main_batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=main_batch_size, shuffle=True, drop_last=True)
 
     # define model and optimizer
-    model = resnet18(pretrained=False)
-    model.fc = torch.nn.Linear(512, 1)
-    
+    model = Vanilla(num_classes=num_classes)
     model.to(device)
+    print(model)
+
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -117,9 +110,9 @@ def train(
         )
     elif main_optimizer_tag == "Adam":
         optimizer = torch.optim.Adam(
-            model.fc.parameters(),
-            lr=1e-4,
-            weight_decay=0,
+            list(model.resnet_feature_extractor.fc.parameters()),
+            lr=main_learning_rate,
+            weight_decay=main_weight_decay
         )
     elif main_optimizer_tag == "AdamW":
         optimizer = torch.optim.AdamW(
@@ -130,8 +123,8 @@ def train(
     else:
         raise NotImplementedError
 
-    label_criterion = torch.nn.BCEWithLogitsLoss(reduction="none")
-
+    # label_criterion = torch.nn.BCEWithLogitsLoss(reduction="none")
+    label_criterion = torch.nn.CrossEntropyLoss(reduction='none')
     # define evaluation function
     @torch.no_grad()
     def evaluate(model, loader, split):
@@ -154,8 +147,7 @@ def train(
                 logits = cls_out[0]
             else:
                 logits = cls_out
-            prob = torch.sigmoid(logits).squeeze(-1)
-            pred = prob > 0.5
+            pred = logits.data.max(1, keepdim=True)[1].squeeze(1)
             correct = (pred == target_attr_label).long()
             total_correct += correct.sum().item()
             total_num += correct.size(0)
@@ -201,7 +193,7 @@ def train(
         x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
         l = torch.stack([d[1] for d in data]).view(-1)
         images = []
-        for i in range(10):
+        for i in range(2):
             if x[l.cpu() == i][:10].shape[0] == 10:
                 images.append(x[l.cpu() == i][:10])
             else:
@@ -211,15 +203,13 @@ def train(
         plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
         wandb.log({plot_name: wandb.Image(grid_img)})
 
-
-    valid_attrwise_accs_list = []
-    wandb.watch(model, log='all', log_freq=100)
+    # wandb.watch(model, log='all', log_freq=100)
     visualise_training_data(train_loader, target_attr_idx)
+
     main_valid_freq = 100
-    
     for step in tqdm(range(main_num_steps)):
         try:
-            index, data, attr = next(train_iter)
+            _, data, attr = next(train_iter)
         except:
             train_iter = iter(train_loader)
             data, attr = next(train_iter)
@@ -230,7 +220,7 @@ def train(
         label = attr[:, target_attr_idx]
 
         logit = model(data)
-        loss_per_sample = label_criterion(logit.squeeze(1), label.float())
+        loss_per_sample = label_criterion(logit.squeeze(1), label)
 
         loss = loss_per_sample.mean()
 
@@ -239,7 +229,7 @@ def train(
 
         optimizer.step()
 
-        main_log_freq = 100
+        main_log_freq = 1000
         if step % main_log_freq == 0:
             loss = loss.detach().cpu()
             writer.add_scalar("loss/train", loss, step)
@@ -256,10 +246,9 @@ def train(
 
         if step % main_valid_freq == 0:
             test_accuracy = evaluate(model, test_loader, 'eval')
+            visualise_model_predictions(model, test_loader, device, 'test')
             wandb.log(test_accuracy)
 
-    # visualise_model_predictions(model, valid_loader, device, "predictions")
-    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data")
 
     model_path = os.path.join(log_dir, "result", main_tag, "model.th")
     state_dict = {

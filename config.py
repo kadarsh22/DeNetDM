@@ -45,14 +45,14 @@ def get_config():
 # User Configuration
 @ex.named_config
 def server_user_lff():
-    log_dir = "/home/user/workspace/debias/log_lff"
+    log_dir = '/vol/research/silpa/project1_bias/results/lff'
     data_dir = "/home/user/datasets/debias"
 
 
 @ex.named_config
 def server_user_vanilla():
-    log_dir = "/home/user/workspace/debias/log_vanilla"
-    data_dir = "/home/user/datasets/debias"
+    log_dir = '/vol/research/silpa/project1_bias/results/vanilla'
+    data_dir = '/vol/research/silpa/project1_bias/data'
 
 
 @ex.named_config
@@ -68,7 +68,7 @@ def server_user_ours():
 @ex.named_config
 def server_user_ours_simul_gce_focal():
     log_dir = "/home/user/workspace/debias/log_ours_simul_gce_focal"
-    data_dir = "/home/user/datasets/debias"
+    data_dir = "/home/user/datasets/debias/coloredMNIST/"
 
 @ex.named_config
 def remote_user_vanilla():
@@ -103,11 +103,11 @@ def remote_user_lff():
 @ex.named_config
 def colored_mnist(log_dir):
     dataset_tag = "ColoredMNIST"
-    model_tag = 'Product_Of_Experts'
+    model_tag = "Product_Of_Experts"
     main_num_steps = 235 * 100
     target_attr_idx = 0
     bias_attr_idx = 1
-    main_valid_freq = 235
+    main_valid_freq = 1000
     main_tag = "ColoredMNIST"
     main_batch_size = 256
     log_dir = os.path.join(log_dir, 'colored_mnist')
@@ -133,13 +133,27 @@ def celeba(log_dir):
     model_tag = 'ResNet18'
     target_attr_idx = 9
     bias_attr_idx = 20
-    main_num_steps = 75 * 200
+    main_num_steps = 636 * 200
     main_valid_freq = 636
     main_batch_size = 256
     main_learning_rate = 1e-4
     main_weight_decay = 1e-4
     main_tag = 'CelebA-{}-{}'.format(target_attr_idx, bias_attr_idx)
     log_dir = os.path.join(log_dir, 'celeba')
+
+@ex.named_config
+def bffhq(log_dir):
+    dataset_tag = 'BFFHQ'
+    model_tag = 'ResNet18'
+    target_attr_idx = 9
+    bias_attr_idx = 20
+    main_num_steps = 15000
+    main_valid_freq = 636
+    main_batch_size = 32
+    main_learning_rate = 1e-4
+    main_weight_decay = 0
+    main_tag = 'CelebA-{}-{}'.format(target_attr_idx, bias_attr_idx)
+    log_dir = os.path.join(log_dir, 'bffhq')
 
 
 @ex.named_config
@@ -207,8 +221,6 @@ def severity4(dataset_tag, main_tag):
     dataset_tag += "-Severity4"
     main_tag += "-Severity4"
 
-
-
 # Method Configuration
 
 @ex.named_config
@@ -243,4 +255,3 @@ def reverse(main_tag):
     main_tag += '_reverse'
     target_attr_idx = 1
     bias_attr_idx = 0
-

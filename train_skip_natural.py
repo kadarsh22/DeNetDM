@@ -5,8 +5,8 @@ import wandb
 import random
 from data.bffhq import bFFHQDataset
 from torchvision import transforms as T
-from torchvision.models import resnet18
-from module.mlp import MLP_Skip
+from module.mlp import Product_Of_Experts
+import torch.nn as nn
 
 import numpy as np
 
@@ -22,7 +22,6 @@ with warnings.catch_warnings():
     from torch.utils.tensorboard import SummaryWriter
 
 from config import ex
-from data.util import get_dataset, IdxDataset, ZippedDataset
 from module.util import get_model
 from util import add_identifier_to_keys
 from util import MultiDimAverageMeter
@@ -87,34 +86,33 @@ def train(
     ]
     )
     train_dataset = bFFHQDataset(
-        '/home/prathosh/data/bffhq', 'train', 'conflict',transform=train_transform)
-    align_dataset = bFFHQDataset(
-        '/home/prathosh/data/bffhq', 'train', 'align' ,transform=train_transform)
-    conflict_dataset = bFFHQDataset(
-        '/home/prathosh/data/bffhq', 'train', 'conflict',transform=train_transform)
+        data_dir, split='train', transform=train_transform)
+    # align_dataset = bFFHQDataset(
+    #     data_dir, split='train', typ='align' ,transform=train_transform)
+    # conflict_dataset = bFFHQDataset(
+    #     data_dir, split='train', type='conflict',transform=train_transform)
 
-    valid_dataset = bFFHQDataset('/home/prathosh/data/bffhq', 'valid', transform=test_transform)
-    test_dataset = bFFHQDataset('/home/prathosh/data/bffhq', 'test', transform=test_transform)
+    test_dataset = bFFHQDataset(data_dir, 'test', transform=test_transform)
 
     attr_dims = [2, 2]
     target_attr_idx = bFFHQDataset.target_attr_index
     bias_attr_idx = bFFHQDataset.bias_attr_index
 
-    num_classes = 1
+    num_classes = 2
     attr_dims = attr_dims
     eye_tsr = torch.eye(attr_dims[0]).long()
 
     train_loader = DataLoader(train_dataset, batch_size=main_batch_size, shuffle=True)
-    align_loader = DataLoader(align_dataset, batch_size=main_batch_size, shuffle=True)
-    conflict_loader = DataLoader(conflict_dataset, batch_size=main_batch_size, shuffle=True)
+    # align_loader = DataLoader(align_dataset, batch_size=main_batch_size, shuffle=True)
+    # conflict_loader = DataLoader(conflict_dataset, batch_size=main_batch_size, shuffle=True)
     
-    val_loader = DataLoader(valid_dataset, batch_size=main_batch_size, shuffle=True, drop_last=True)
+    # val_loader = DataLoader(valid_dataset, batch_size=main_batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=main_batch_size, shuffle=True, drop_last=True)
 
     # define model and optimizer
-    model = resnet18(pretrained=False)
-    #model= MLP_Skip(inp=512 , num_classes=num_classes)
+    model = Product_Of_Experts(num_classes=num_classes)
     model.to(device)
+    print(model)
     
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
@@ -125,9 +123,10 @@ def train(
         )
     elif main_optimizer_tag == "Adam":
         optimizer = torch.optim.Adam(
-            model.parameters(),
-            lr=1e-4,
-            weight_decay=0,
+            list(model.main.parameters()) + list(
+                model.feature2.parameters()) + list(model.classifier.parameters()),
+            lr=main_learning_rate,
+            weight_decay=main_weight_decay,
         )
     elif main_optimizer_tag == "AdamW":
         optimizer = torch.optim.AdamW(
@@ -137,8 +136,8 @@ def train(
         )
     else:
         raise NotImplementedError
-
-    label_criterion = torch.nn.BCEWithLogitsLoss(reduction="none")
+    
+    label_criterion = nn.CrossEntropyLoss(reduction='none')
 
     # define evaluation function
     @torch.no_grad()
@@ -162,8 +161,7 @@ def train(
                 logits = cls_out[0]
             else:
                 logits = cls_out
-            prob = torch.sigmoid(logits).squeeze(-1)
-            pred = prob > 0.5
+            pred = logits.data.max(1, keepdim=True)[1].squeeze(1)
             correct = (pred == target_attr_label).long()
             total_correct += correct.sum().item()
             total_num += correct.size(0)
@@ -201,13 +199,10 @@ def train(
         wandb.log({"training_data": wandb.Image(grid_img)})
 
     def visualise_model_predictions(model, valid_loader, device, plot_name):
-        data = []
-        train_iter = iter(valid_loader)
-        images, attr = next(train_iter)
-        predictions = torch.sigmoid(model(images.to(device)))
-        pred = (predictions > 0.5).squeeze(-1).long()
-        data.append((images, pred))
-
+        if plot_name != "predictions":
+            data = [(images, torch.max(model(images.to(device)).data, 1)[1]) for images, attr in valid_loader]
+        else:
+            data = [(images, torch.max(model(images.to(device)).data, 1)[1]) for index, images, attr in valid_loader]
         img_size = data[0][0].shape[-1]
         x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
         l = torch.stack([d[1] for d in data]).view(-1)
@@ -221,30 +216,15 @@ def train(
         grid_img = torchvision.utils.make_grid(images[:100], nrow=10, normalize=False)
         plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
         wandb.log({plot_name: wandb.Image(grid_img)})
+  
 
-    # define extracting indices function
-    def get_align_skew_indices(lookup_list, indices):
-        '''
-        lookup_list:
-            A list of non-negative integer. 0 should indicate bias-align sample and otherwise(>0) indicate bias-skewed sample.
-            Length of (lookup_list) should be the number of unique samples
-        indices:
-            True indices of sample to look up.
-        '''
-        pseudo_bias_label = lookup_list[indices]
-        skewed_indices = (pseudo_bias_label != 0).nonzero().squeeze(1)
-        aligned_indices = (pseudo_bias_label == 0).nonzero().squeeze(1)
-
-        return aligned_indices, skewed_indices
-
-    valid_attrwise_accs_list = []
     wandb.watch(model, log='all', log_freq=100)
     visualise_training_data(train_loader, target_attr_idx)
 
     main_valid_freq = 100
     for step in tqdm(range(main_num_steps)):
         try:
-            index, data, attr = next(train_iter)
+            _, data, attr = next(train_iter)
         except:
             train_iter = iter(train_loader)
             data, attr = next(train_iter)
@@ -255,7 +235,7 @@ def train(
         label = attr[:, target_attr_idx]
 
         logit = model(data)
-        loss_per_sample = label_criterion(logit.squeeze(1), label.float())
+        loss_per_sample = label_criterion(logit.squeeze(1), label)
 
         loss = loss_per_sample.mean()
 
@@ -264,7 +244,7 @@ def train(
 
         optimizer.step()
 
-        main_log_freq = 100
+        main_log_freq = 1000
         if step % main_log_freq == 0:
             loss = loss.detach().cpu()
             writer.add_scalar("loss/train", loss, step)
@@ -281,22 +261,23 @@ def train(
 
         if step % main_valid_freq == 0:
             test_accuracy = evaluate(model, test_loader, 'eval')
+            visualise_model_predictions(model, test_loader, device, "predictions-all-skip")
             wandb.log(test_accuracy)
 
             model.skip_weight = 1
             model.feature_weight = 0
             test_accuracy = evaluate(model, test_loader, 'eval')
             test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
-            visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-skip")
-            visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
+            # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-skip")
+            # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
             wandb.log(test_accuracy)
 
             model.skip_weight = 0
             model.feature_weight= 1
             test_accuracy = evaluate(model, test_loader, 'eval')
             test_accuracy = add_identifier_to_keys(test_accuracy, 'feature')
-            visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-feature")
-            visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
+            # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-feature")
+            # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
             wandb.log(test_accuracy)
             
             model.skip_weight = 1
@@ -318,18 +299,18 @@ def train(
     wandb.run.log_artifact(artifact)
     
     #  model_analysis
-    visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-data")
-    visualise_model_predictions(model, align_loader, device, "predictions-aligned_data")
+    # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-data")
+    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data")
 
     # individual component analysis
-    model.skip_weight = 1
-    model.feature_weight = 0
-    visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-skip")
-    visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
+    # model.skip_weight = 1
+    # model.feature_weight = 0
+    # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-skip")
+    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
 
-    # individual component analysis
-    model.skip_weight = 0
-    model.feature_weight = 1
-    visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-feature")
-    visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
+    # # individual component analysis
+    # model.skip_weight = 0
+    # model.feature_weight = 1
+    # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-feature")
+    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
 
