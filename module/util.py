@@ -1,6 +1,6 @@
 import torch.nn as nn
 from module.resnet import resnet20
-from module.mlp import MLP, Product_Of_Experts
+from module.mlp import Product_Of_Experts
 from module.lenet import LeNet4
 from torchvision.models import resnet18, resnet50
 
