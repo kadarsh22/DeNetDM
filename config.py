@@ -51,46 +51,24 @@ def server_user_lff():
 
 @ex.named_config
 def server_user_vanilla():
-    log_dir = '/vol/research/silpa/project1_bias/results/vanilla'
-    data_dir = '/vol/research/silpa/project1_bias/data'
-
-
-@ex.named_config
-def server_user_gce():
-    log_dir = "/home/user/workspace/debias/log_gce"
-    data_dir = "/home/user/datasets/debias"
+    log_dir = 'results/log_vanilla/bffhq'
+    data_dir = '/home/prathosh/data/bffhq'
 
 @ex.named_config
 def server_user_ours():
-    log_dir = "/home/user/workspace/debias/log_ours"
-    data_dir = "/home/user/datasets/debias"
-
-@ex.named_config
-def server_user_ours_simul_gce_focal():
-    log_dir = "/home/user/workspace/debias/log_ours_simul_gce_focal"
-    data_dir = "/home/user/datasets/debias/coloredMNIST/"
+    log_dir = "results/log_vanilla/"
+    data_dir = "../data/"
 
 @ex.named_config
 def remote_user_vanilla():
     log_dir = "results/log_vanilla"
     data_dir = "../data/"
 
-
-@ex.named_config
-def remote_user_gce():
-    log_dir = "results/logs_gce"
-    data_dir = "../data/"
-
-
 @ex.named_config
 def remote_user_ours():
     log_dir = "results/log_ours"
     data_dir = "../data/"
 
-@ex.named_config
-def remote_user_ours_simul_gce_focal():
-    log_dir = "results/log_ours_simul_gce_focal"
-    data_dir = "../data/"
 
 @ex.named_config
 def remote_user_lff():
@@ -116,7 +94,7 @@ def colored_mnist(log_dir):
 @ex.named_config
 def corrupted_cifar10(log_dir):
     dataset_tag = "CorruptedCIFAR10"
-    model_tag = 'ResNet20'
+    model_tag = 'ResNet20Skip'
     target_attr_idx = 0
     bias_attr_idx = 1
     main_num_steps = 196 * 200

@@ -60,7 +60,7 @@ def train(
 ):
     wandb.login()
 
-    wandb.init(project="bias_mitigation_server", entity="causality-and-robustness-of-classifiers",
+    wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
     wandb.run.name = "vanilla_" + str(dataset_tag)
     wandb.run.log_code(".")
@@ -144,12 +144,12 @@ def train(
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
     # define evaluation function
-    def evaluate(model, data_loader, idx):
+    def evaluate(model, data_loader):
         model.eval()
         acc = 0
         attrwise_acc_meter = MultiDimAverageMeter(attr_dims)
         for index, data, attr in tqdm(data_loader, leave=False):
-            label = attr[:, idx]
+            label = attr[:, target_attr_idx]
             data = data.to(device)
             attr = attr.to(device)
             label = label.to(device)
@@ -244,7 +244,7 @@ def train(
         loss.backward()
         optimizer.step()
 
-        main_log_freq = 10
+        main_log_freq = 500
         if step % main_log_freq == 0:
             loss = loss.detach().cpu()
             writer.add_scalar("loss/train", loss, step)
@@ -259,35 +259,18 @@ def train(
                 skewed_loss = loss_per_sample[label != bias_attr].mean()
                 writer.add_scalar("loss/train_skewed", skewed_loss, step)
 
-        if step % main_valid_freq == 0:
-            valid_attrwise_accs = evaluate(model, valid_loader, target_attr_idx)
+            valid_attrwise_accs = evaluate(model, valid_loader)
             valid_attrwise_accs_list.append(valid_attrwise_accs)
             valid_accs = torch.mean(valid_attrwise_accs)
-            writer.add_scalar("acc/valid_target", valid_accs, step)
+            writer.add_scalar("acc/valid", valid_accs, step)
             eye_tsr = torch.eye(num_classes)
             writer.add_scalar(
-                "acc/valid_aligned_target",
+                "acc/valid_aligned",
                 valid_attrwise_accs[eye_tsr > 0.0].mean(),
                 step
             )
             writer.add_scalar(
-                "acc/valid_skewed_target",
-                valid_attrwise_accs[eye_tsr == 0.0].mean(),
-                step
-            )
-
-            valid_attrwise_accs = evaluate(model, valid_loader, bias_attr_idx)
-            valid_attrwise_accs_list.append(valid_attrwise_accs)
-            valid_accs = torch.mean(valid_attrwise_accs)
-            writer.add_scalar("acc/valid_bias", valid_accs, step)
-            eye_tsr = torch.eye(num_classes)
-            writer.add_scalar(
-                "acc/valid_aligned_bias",
-                valid_attrwise_accs[eye_tsr > 0.0].mean(),
-                step
-            )
-            writer.add_scalar(
-                "acc/valid_skewed_bias",
+                "acc/valid_skewed",
                 valid_attrwise_accs[eye_tsr == 0.0].mean(),
                 step
             )
