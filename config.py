@@ -83,7 +83,7 @@ def colored_mnist(log_dir):
     main_num_steps = 235 * 100
     target_attr_idx = 0
     bias_attr_idx = 1
-    main_valid_freq = 100
+    main_valid_freq = 235
     main_log_freq = 10
     main_tag = "ColoredMNIST"
     main_batch_size = 256
