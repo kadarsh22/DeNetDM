@@ -79,12 +79,12 @@ def train(
         transform_split="train"
     )
 
-    #align_dataset = get_dataset(
-    #    dataset_tag + '-only_align',
-    #    data_dir=data_dir,
-    #    dataset_split="train",
-    #    transform_split="train"
-    #)
+    align_dataset = get_dataset(
+       dataset_tag + '-only_align',
+       data_dir=data_dir,
+       dataset_split="train",
+       transform_split="train"
+    )
 
     valid_dataset = get_dataset(
         dataset_tag,
@@ -110,14 +110,14 @@ def train(
         drop_last=True
     )
 
-    #align_loader = DataLoader(
-    #    align_dataset,
-    #    batch_size=main_batch_size,
-    #    shuffle=True,
-    #    num_workers=16,
-    #    pin_memory=True,
-    #    drop_last=True
-    #)
+    align_loader = DataLoader(
+       align_dataset,
+       batch_size=main_batch_size,
+       shuffle=True,
+       num_workers=16,
+       pin_memory=True,
+       drop_last=True
+    )
 
     valid_loader = DataLoader(
         valid_dataset,
