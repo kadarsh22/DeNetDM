@@ -47,7 +47,7 @@ def get_config():
 @ex.named_config
 def server_user_vanilla():
     log_dir = '/media/user/New Volume/results'
-    data_dir = '/home/user/datasets/debias'
+    data_dir = '/home/user/datasets/debias/coloredMNIST'
 
 
 @ex.named_config
@@ -131,7 +131,7 @@ def bffhq(log_dir):
     main_batch_size = 32
     main_learning_rate = 1e-4
     main_weight_decay = 0
-    main_tag = 'CelebA-{}-{}'.format(target_attr_idx, bias_attr_idx)
+    main_tag = 'BFFHQ-{}-{}'.format(target_attr_idx, bias_attr_idx)
     log_dir = os.path.join(log_dir, 'bffhq')
 
 

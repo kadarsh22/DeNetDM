@@ -28,7 +28,7 @@ from module.util import get_model
 from util import MultiDimAverageMeter
 
 
-def set_seed(seed: int = 42) -> None:
+def set_seed(seed: int = 172) -> None:
     np.random.seed(seed)
     random.seed(seed)
     torch.manual_seed(seed)
