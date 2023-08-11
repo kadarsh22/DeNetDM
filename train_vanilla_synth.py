@@ -54,6 +54,7 @@ def train(
         main_num_steps,
         main_valid_freq,
         main_batch_size,
+        main_log_freq,
         main_optimizer_tag,
         main_learning_rate,
         main_weight_decay,
@@ -244,7 +245,6 @@ def train(
         loss.backward()
         optimizer.step()
 
-        main_log_freq = 500
         if step % main_log_freq == 0:
             loss = loss.detach().cpu()
             writer.add_scalar("loss/train", loss, step)

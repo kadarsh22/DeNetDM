@@ -53,6 +53,7 @@ def train(
         main_num_steps,
         main_valid_freq,
         main_batch_size,
+        main_log_freq,
         main_optimizer_tag,
         main_learning_rate,
         main_weight_decay,
@@ -304,7 +305,6 @@ def train(
 
         optimizer.step()
 
-        main_log_freq = 500
         if step % main_log_freq == 0:
             loss = loss.detach().cpu()
             writer.add_scalar("loss/train", loss, step)
@@ -319,7 +319,6 @@ def train(
                 skewed_loss = loss_per_sample[label != bias_attr].mean()
                 writer.add_scalar("loss/train_skewed", skewed_loss, step)
 
-        if step % main_log_freq == 0:
             valid_attrwise_accs = evaluate(model, valid_loader)
             valid_attrwise_accs_list.append(valid_attrwise_accs)
             valid_accs = torch.mean(valid_attrwise_accs)
@@ -336,7 +335,7 @@ def train(
                 step
             )
 
-        if step % main_log_freq == 0:
+        if step % main_valid_freq == 0:
 
             model.skip_weight = 1
             model.feature_weight = 0

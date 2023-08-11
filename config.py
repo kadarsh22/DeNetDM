@@ -31,6 +31,7 @@ def get_config():
 
     main_num_steps = None
     main_valid_freq = None
+    main_log_freq = None
     epochs = None
 
     main_batch_size = 256
@@ -42,27 +43,24 @@ def get_config():
     main_save_logits = False
 
 
-# User Configuration
-@ex.named_config
-def server_user_lff():
-    log_dir = '/vol/research/silpa/project1_bias/results/lff'
-    data_dir = "/home/user/datasets/debias"
-
-
+## LOCAL MACHINE
 @ex.named_config
 def server_user_vanilla():
-    log_dir = 'results/log_vanilla/bffhq'
-    data_dir = '/home/prathosh/data/bffhq'
+    log_dir = '/media/user/New Volume/results'
+    data_dir = '/home/user/datasets/debias'
+
 
 @ex.named_config
 def server_user_ours():
-    log_dir = "results/log_vanilla/"
-    data_dir = "../data/"
+    log_dir = '/media/user/New Volume/results'
+    data_dir = '/home/user/datasets/debias/coloredMNIST'
 
+## REMOTE MACHINE
 @ex.named_config
 def remote_user_vanilla():
     log_dir = "results/log_vanilla"
     data_dir = "../data/"
+
 
 @ex.named_config
 def remote_user_ours():
@@ -85,7 +83,8 @@ def colored_mnist(log_dir):
     main_num_steps = 235 * 100
     target_attr_idx = 0
     bias_attr_idx = 1
-    main_valid_freq = 235
+    main_valid_freq = 100
+    main_log_freq = 10
     main_tag = "ColoredMNIST"
     main_batch_size = 256
     log_dir = os.path.join(log_dir, 'colored_mnist')
@@ -99,6 +98,7 @@ def corrupted_cifar10(log_dir):
     bias_attr_idx = 1
     main_num_steps = 196 * 200
     main_valid_freq = 196
+    main_log_freq = 200
     main_batch_size = 256
     main_tag = "CorruptedCIFAR10"
     gamma = None
@@ -118,6 +118,7 @@ def celeba(log_dir):
     main_weight_decay = 1e-4
     main_tag = 'CelebA-{}-{}'.format(target_attr_idx, bias_attr_idx)
     log_dir = os.path.join(log_dir, 'celeba')
+
 
 @ex.named_config
 def bffhq(log_dir):
@@ -198,6 +199,7 @@ def severity3(dataset_tag, main_tag):
 def severity4(dataset_tag, main_tag):
     dataset_tag += "-Severity4"
     main_tag += "-Severity4"
+
 
 # Method Configuration
 
