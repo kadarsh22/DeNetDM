@@ -61,7 +61,7 @@ def train(
 
     wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "skip_bffhq_ours"
+    wandb.run.name = "skip_bffhq_ours_increased_depth_feature_head_one"
     wandb.run.log_code(".")
     wandb.config.update({"dataset_tag": dataset_tag, "algorithm": 'vanilla'})
     artifact = wandb.Artifact(wandb.run.name, type='model')
@@ -87,10 +87,10 @@ def train(
     )
     train_dataset = bFFHQDataset(
         data_dir, split='train', transform=train_transform)
-    # align_dataset = bFFHQDataset(
-    #     data_dir, split='train', typ='align' ,transform=train_transform)
-    # conflict_dataset = bFFHQDataset(
-    #     data_dir, split='train', type='conflict',transform=train_transform)
+    align_dataset = bFFHQDataset(
+        data_dir, split='train', type='align' ,transform=train_transform)
+    conflict_dataset = bFFHQDataset(
+        data_dir, split='train', type='conflict',transform=train_transform)
 
     test_dataset = bFFHQDataset(data_dir, 'test', transform=test_transform)
 
@@ -103,10 +103,8 @@ def train(
     eye_tsr = torch.eye(attr_dims[0]).long()
 
     train_loader = DataLoader(train_dataset, batch_size=main_batch_size, shuffle=True)
-    # align_loader = DataLoader(align_dataset, batch_size=main_batch_size, shuffle=True)
-    # conflict_loader = DataLoader(conflict_dataset, batch_size=main_batch_size, shuffle=True)
-    
-    # val_loader = DataLoader(valid_dataset, batch_size=main_batch_size, shuffle=True, drop_last=True)
+    align_loader = DataLoader(align_dataset, batch_size=main_batch_size, shuffle=True)
+    conflict_loader = DataLoader(conflict_dataset, batch_size=main_batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=main_batch_size, shuffle=True, drop_last=True)
 
     # define model and optimizer
@@ -268,16 +266,16 @@ def train(
             model.feature_weight = 0
             test_accuracy = evaluate(model, test_loader, 'eval')
             test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
-            # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-skip")
-            # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
+            visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-skip")
+            visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
             wandb.log(test_accuracy)
 
             model.skip_weight = 0
             model.feature_weight= 1
             test_accuracy = evaluate(model, test_loader, 'eval')
             test_accuracy = add_identifier_to_keys(test_accuracy, 'feature')
-            # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-feature")
-            # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
+            visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-feature")
+            visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
             wandb.log(test_accuracy)
             
             model.skip_weight = 1
@@ -287,7 +285,7 @@ def train(
 
     visualise_model_predictions(model, test_loader, device, 'test')
 
-    model_path = os.path.join(log_dir, "result", main_tag, "model.th")
+    model_path = os.path.join(log_dir, "result", "model.th")
     state_dict = {
         'steps': step,
         'state_dict': model.state_dict(),
@@ -299,18 +297,18 @@ def train(
     wandb.run.log_artifact(artifact)
     
     #  model_analysis
-    # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-data")
-    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data")
+    visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-data")
+    visualise_model_predictions(model, align_loader, device, "predictions-aligned_data")
 
     # individual component analysis
-    # model.skip_weight = 1
-    # model.feature_weight = 0
-    # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-skip")
-    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
+    model.skip_weight = 1
+    model.feature_weight = 0
+    visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-skip")
+    visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
 
     # # individual component analysis
-    # model.skip_weight = 0
-    # model.feature_weight = 1
-    # visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-feature")
-    # visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
+    model.skip_weight = 0
+    model.feature_weight = 1
+    visualise_model_predictions(model, conflict_loader, device, "predictions-conflict-feature")
+    visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
 

@@ -81,11 +81,11 @@ def remote_user_lff():
 @ex.named_config
 def colored_mnist(log_dir):
     dataset_tag = "ColoredMNIST"
-    model_tag = "Product_Of_Experts"
+    model_tag = "MLP"
     main_num_steps = 235 * 100
     target_attr_idx = 0
     bias_attr_idx = 1
-    main_valid_freq = 1000
+    main_valid_freq = 235
     main_tag = "ColoredMNIST"
     main_batch_size = 256
     log_dir = os.path.join(log_dir, 'colored_mnist')
@@ -94,7 +94,7 @@ def colored_mnist(log_dir):
 @ex.named_config
 def corrupted_cifar10(log_dir):
     dataset_tag = "CorruptedCIFAR10"
-    model_tag = 'ResNet20Skip'
+    model_tag = 'ResNet32Skip'
     target_attr_idx = 0
     bias_attr_idx = 1
     main_num_steps = 196 * 200

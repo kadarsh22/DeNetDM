@@ -259,6 +259,8 @@ def train(
                 skewed_loss = loss_per_sample[label != bias_attr].mean()
                 writer.add_scalar("loss/train_skewed", skewed_loss, step)
 
+        if step % main_valid_freq == 0:
+
             valid_attrwise_accs = evaluate(model, valid_loader)
             valid_attrwise_accs_list.append(valid_attrwise_accs)
             valid_accs = torch.mean(valid_attrwise_accs)
@@ -274,7 +276,6 @@ def train(
                 valid_attrwise_accs[eye_tsr == 0.0].mean(),
                 step
             )
-
 
     os.makedirs(os.path.join(log_dir, "result", main_tag), exist_ok=True)
     result_path = os.path.join(log_dir, "result", main_tag, "result.th")

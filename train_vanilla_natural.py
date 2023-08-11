@@ -203,7 +203,7 @@ def train(
         plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
         wandb.log({plot_name: wandb.Image(grid_img)})
 
-    # wandb.watch(model, log='all', log_freq=100)
+    wandb.watch(model, log='all', log_freq=100)
     visualise_training_data(train_loader, target_attr_idx)
 
     main_valid_freq = 100
@@ -250,7 +250,7 @@ def train(
             wandb.log(test_accuracy)
 
 
-    model_path = os.path.join(log_dir, "result", main_tag, "model.th")
+    model_path = os.path.join(log_dir, "model.th")
     state_dict = {
         'steps': step,
         'state_dict': model.state_dict(),

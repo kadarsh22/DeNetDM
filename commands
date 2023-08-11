@@ -1,11 +1,8 @@
 ## CMNIST
-CUDA_VISIBLE_DEVICES=1 python3 train_vanilla.py with remote_user_vanilla colored_mnist skewed3 severity4
-CUDA_VISIBLE_DEVICES=1 python3 train_gce.py  with remote_user_gce colored_mnist skewed3 severity4
-CUDA_VISIBLE_DEVICES=1 python3 train.py with remote_user_lff colored_mnist skewed3 severity4
-CUDA_VISIBLE_DEVICES=1 python3 train_ours.py with remote_user_ours colored_mnist skewed3 severity4 gce_model_path1 gamma1
-CUDA_VISIBLE_DEVICES=1 python3 train_ours_simul_gce_focal.py with remote_user_ours_simul_gce_focal colored_mnist skewed3 severity4 gamma1
- ##CHANGE HARCODED GCE MODEL PATH
-
+#change config.py model to MLP
+CUDA_VISIBLE_DEVICES=1 python3 train_vanilla_synth.py with remote_user_vanilla colored_mnist skewed3 severity4
+#change config.py model to MLP
+CUDA_VISIBLE_DEVICES=1 python3 train_vanilla_synth.py with remote_user_vanilla colored_mnist skewed3 severity4
 ## CCIFAR10
 CUDA_VISIBLE_DEVICES=1 python3 train_vanilla.py with remote_user_vanilla corrupted_cifar10 type0 skewed3 severity4
 CUDA_VISIBLE_DEVICES=1 python3 train_gce.py with remote_user_gce corrupted_cifar10 type0 skewed3 severity4

@@ -1,6 +1,6 @@
 import torch.nn as nn
-from module.resnet import resnet20 ,resnet20_skip
-from module.mlp import Product_Of_Experts
+from module.resnet import resnet20 ,resnet20_skip ,resnet32_skip
+from module.mlp import Product_Of_Experts ,MLP
 from module.lenet import LeNet4
 from torchvision.models import resnet18, resnet50
 
@@ -11,6 +11,8 @@ def get_model(model_tag, num_classes, num_layers=6):
         return resnet20(num_classes)
     elif model_tag == "ResNet20Skip":
         return resnet20_skip(num_classes)
+    elif model_tag == "ResNet32Skip":
+        return resnet32_skip(num_classes)
     elif model_tag == "ResNet18":
         model = resnet18(pretrained=True)
         for param in model.parameters():

@@ -281,8 +281,7 @@ def train(
         return aligned_indices, skewed_indices
 
     valid_attrwise_accs_list = []
-    wandb.watch(model, log='all', log_freq=100)
-    # visualise_training_data(train_loader, target_attr_idx)
+    visualise_training_data(train_loader, target_attr_idx)
 
     for step in tqdm(range(main_num_steps)):
         try:
@@ -337,6 +336,8 @@ def train(
                 step
             )
 
+        if step % main_log_freq == 0:
+
             model.skip_weight = 1
             model.feature_weight = 0
             valid_attrwise_accs = evaluate(model, valid_loader)
@@ -374,19 +375,6 @@ def train(
 
     #  model_analysis
     visualise_model_predictions(model, valid_loader, device, "predictions")
-    #visualise_model_predictions(model, align_loader, device, "predictions-aligned_data")
+    visualise_model_predictions(model, align_loader, device, "predictions-aligned_data")
     plot_confusion_matrix(model, valid_loader, device, "overall")
 
-    # individual component analysis
-    model.skip_weight = 1
-    model.feature_weight = 0
-    visualise_model_predictions(model, valid_loader, device, "predictions-skip")
-    #visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-skip")
-    plot_confusion_matrix(model, valid_loader, device, "skip-only")
-
-    # individual component analysis
-    model.skip_weight = 0
-    model.feature_weight = 1
-    visualise_model_predictions(model, valid_loader, device, "predictions-feature")
-    #visualise_model_predictions(model, align_loader, device, "predictions-aligned_data-feature")
-    plot_confusion_matrix(model, valid_loader, device, "feature_only")

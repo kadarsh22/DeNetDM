@@ -15,6 +15,30 @@ class Vanilla(nn.Module):
         x = self.resnet_feature_extractor(x)
         return x
 
+class MLP(nn.Module):
+    def __init__(self, num_classes=10, return_feat=False):
+        super(MLP, self).__init__()
+        self.feature = nn.Sequential(
+            nn.Linear(3 * 32*32, 100),
+            nn.ReLU(),
+            nn.Linear(100, 100),
+            nn.ReLU(),
+            nn.Linear(100, 100),
+            nn.ReLU()
+        )
+        self.classifier = nn.Linear(100, num_classes)
+        self.return_feat = return_feat
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)
+        x = self.feature(x)
+        x = self.classifier(x)
+
+        if self.return_feat:
+            return x, feat
+        else:
+            return x
+
 
 class Skip(nn.Module):
     def __init__(self, num_layers=1):
