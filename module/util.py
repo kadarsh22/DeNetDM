@@ -1,6 +1,6 @@
 import torch.nn as nn
 from module.resnet import resnet20 ,resnet20_skip ,resnet32_skip
-from module.mlp import Product_Of_Experts ,MLP
+from module.mlp import Resnet_Product_Of_Experts , MLP , MLP_Product_Of_Experts
 from module.lenet import LeNet4
 from torchvision.models import resnet18, resnet50
 
@@ -32,11 +32,11 @@ def get_model(model_tag, num_classes, num_layers=6):
         return model
     elif model_tag == "MLP":
         return MLP(num_classes=num_classes)
-    elif model_tag == "MLP_Skip":
-        return MLP_Skip(num_layers=num_layers, num_classes=num_classes)
+    elif model_tag == "MLP_Product_Of_Experts":
+        return MLP_Product_Of_Experts(skip_layers=3, main_layers=5, num_classes=num_classes)
     elif model_tag == 'Lenet':
         return LeNet4(num_classes = num_classes)
-    elif model_tag == 'Product_Of_Experts':
+    elif model_tag == 'Resent_Product_Of_Experts':
         return Product_Of_Experts(skip_layers=8, main_layers=8, num_classes=10)
     else:
         raise NotImplementedError

@@ -27,7 +27,7 @@ from module.util import get_model
 from util import MultiDimAverageMeter
 
 
-def set_seed(seed: int = 42) -> None:
+def set_seed(seed: int = 172) -> None:
     np.random.seed(seed)
     random.seed(seed)
     torch.manual_seed(seed)
@@ -61,7 +61,7 @@ def train(
 
     wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "corrupted_cifar10_ours"
+    wandb.run.name = "coloured_mnist_ours"
     wandb.run.log_code(".")
     wandb.config.update({"dataset_tag": dataset_tag, "algorithm": 'vanilla'})
     artifact = wandb.Artifact(wandb.run.name, type='model')
