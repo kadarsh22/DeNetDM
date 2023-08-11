@@ -53,7 +53,7 @@ class MLPSkip(nn.Module):
         return x
 
 class MLP_Product_Of_Experts(nn.Module):
-    def __init__(self, skip_layers=3, main_layers=5, num_classes=10):
+    def __init__(self, skip_layers=3, main_layers=7, num_classes=10):
         super(MLP_Product_Of_Experts, self).__init__()
         self.feature1 = nn.Linear(3 * 32 * 32, 100)
         self.feature2 = nn.Linear(3 * 32 * 32, 100)

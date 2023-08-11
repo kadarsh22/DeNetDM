@@ -33,7 +33,7 @@ def get_model(model_tag, num_classes, num_layers=6):
     elif model_tag == "MLP":
         return MLP(num_classes=num_classes)
     elif model_tag == "MLP_Product_Of_Experts":
-        return MLP_Product_Of_Experts(skip_layers=3, main_layers=5, num_classes=num_classes)
+        return MLP_Product_Of_Experts(skip_layers=7, main_layers=9, num_classes=num_classes)
     elif model_tag == 'Lenet':
         return LeNet4(num_classes = num_classes)
     elif model_tag == 'Resent_Product_Of_Experts':
