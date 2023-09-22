@@ -3,6 +3,41 @@ import torch.nn as nn
 from module.resnet import resnet20
 from collections import OrderedDict
 
+class MLPHiddenlayers(nn.Module):
+    def __init__(self, num_layers=1):
+        super(MLPHiddenlayers, self).__init__()
+        self.hidden_layers = nn.ModuleList()
+        for _ in range(num_layers):
+            self.hidden_layers.append(nn.Linear(100, 100))
+        self.act = nn.ReLU()
+
+    def forward(self, x):
+        for layer in self.hidden_layers:
+            x = self.act(layer(x))
+        return x
+
+
+class CMNISTDeCAMModel(nn.Module):
+    def __init__(self, debias_layers=3, bias_layers=5, num_classes=10):
+        super(CMNISTDeCAMModel, self).__init__()
+        self.debias_branch = nn.Sequential(nn.Linear(3 * 28 * 28, 100),
+                                          nn.ReLU(),
+                                          MLPHiddenlayers(num_layers=debias_layers - 2)
+                                          )
+        self.bias_branch = nn.Sequential(nn.Linear(3 * 28 * 28, 100),
+                                         nn.ReLU(),
+                                         MLPHiddenlayers(num_layers=bias_layers - 2)
+                                         )
+        self.classifier = nn.Linear(100, num_classes)
+        
+    def forward(self, x, debias_weight=1, bias_weight=1):
+        x = x.view(x.size(0), -1)
+        x_debias = self.debias_branch(x)
+        x_bias = self.bias_branch(x)
+        feat = debias_weight * x_debias + bias_weight * x_bias
+        x = self.classifier(feat)
+        return x
+
 class CCIFARDeCAMModel(nn.Module):
     def __init__(self, num_classes=10):
         super(CCIFARDeCAMModel, self).__init__()

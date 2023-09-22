@@ -18,37 +18,15 @@ ex.logger = logger
 @ex.config
 def get_config():
     device = 0
-    log_dir = None
-    data_dir = None
-
-    main_tag = None
-
-    dataset_tag = None
-    model_tag = None
     random_seed = 67
-
-    target_attr_idx = None
-    bias_attr_idx = None
-
-    main_num_steps = None
-    main_valid_freq = None
-    main_log_freq = None
-    epochs = None
-    main_save_logits = False
-
-
-
-
+    
+    
 @ex.named_config
-def server_user_ours():
-    log_dir = '/vol/research/silpa/project1_bias/results'
-    data_dir = '/vol/research/silpa/project1_bias/data/corrupted-cifar10'
-    # data_dir = '/vol/research/silpa/project1_bias/data/cmnist'
-
-@ex.named_config
-def colored_mnist(log_dir):
+def colored_mnist():
     dataset_tag = "ColoredMNIST"
-    model_tag = "MLP_Product_Of_Experts"
+    data_dir = os.path.join('/vol/research/silpa/project1_bias/data/','cmnist')
+    log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'cmnist')
+    model_tag = "CMNISTDeCAMModel"
     num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
@@ -59,24 +37,25 @@ def colored_mnist(log_dir):
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
-    log_dir = os.path.join(log_dir, 'colored_mnist')
+    
 
 @ex.named_config
-def corrupted_cifar10(log_dir):
+def corrupted_cifar10():
     dataset_tag = "CorruptedCIFAR10"
+    data_dir = '/vol/research/silpa/project1_bias/data/corrupted-cifar10'
+    log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'corrupted_cifar')
     model_tag = 'CCIFARDeCAMModel'
+    num_epochs = 200
     target_attr_idx = 0
     bias_attr_idx = 1
-    num_epochs = 200
     main_valid_freq = 1
     main_log_freq = 1
-    main_batch_size = 256
     main_tag = "CorruptedCIFAR10"
+    main_batch_size = 256
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
-    log_dir = os.path.join(log_dir, 'corrupted_cifar')
-
+    
 
 @ex.named_config
 def type0(dataset_tag, main_tag):

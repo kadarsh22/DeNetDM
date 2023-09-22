@@ -47,8 +47,8 @@ transforms = {
     #     "eval": T.Compose([T.ToTensor()])
     #     },
     "ColoredMNIST": {
-        "train": T.Compose([T.ToPILImage(),T.Resize((32,32)),T.ToTensor()]),
-        "eval": T.Compose([T.ToPILImage(),T.Resize((32,32)),T.ToTensor()])
+        "train": T.Compose([T.ToPILImage(),T.Resize((28,28)),T.ToTensor()]),
+        "eval": T.Compose([T.ToPILImage(),T.Resize((28,28)),T.ToTensor()])
         },
     "CorruptedCIFAR10": {
         "train_aug": T.Compose(
