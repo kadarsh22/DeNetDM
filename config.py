@@ -1,7 +1,7 @@
 import os
 import logging
 from sacred import Experiment
-from sacred.observers import MongoObserver
+
 
 ex = Experiment("main")
 logger = logging.getLogger("debias")
@@ -25,6 +25,7 @@ def get_config():
 
     dataset_tag = None
     model_tag = None
+    random_seed = 67
 
     target_attr_idx = None
     bias_attr_idx = None
@@ -33,106 +34,48 @@ def get_config():
     main_valid_freq = None
     main_log_freq = None
     epochs = None
-
-    main_batch_size = 256
-    main_optimizer_tag = 'Adam'
-    main_learning_rate = 1e-3
-    main_weight_decay = 0.0
-    gamma = None
-
     main_save_logits = False
 
 
-## LOCAL MACHINE
-@ex.named_config
-def server_user_vanilla():
-    log_dir = '/media/user/New Volume/results'
-    data_dir = '/home/user/datasets/debias/coloredMNIST'
 
 
 @ex.named_config
 def server_user_ours():
-    log_dir = '/media/user/New Volume/results'
-    data_dir = '/home/user/datasets/debias/coloredMNIST'
-
-## REMOTE MACHINE
-@ex.named_config
-def remote_user_vanilla():
-    log_dir = "results/log_vanilla"
-    data_dir = "../data/"
-
-
-@ex.named_config
-def remote_user_ours():
-    log_dir = "results/log_ours"
-    data_dir = "../data/"
-
-
-@ex.named_config
-def remote_user_lff():
-    log_dir = "results/log_lff"
-    data_dir = "../data/"
-
-
-# Dataset Configuration
+    log_dir = '/vol/research/silpa/project1_bias/results'
+    data_dir = '/vol/research/silpa/project1_bias/data/corrupted-cifar10'
+    # data_dir = '/vol/research/silpa/project1_bias/data/cmnist'
 
 @ex.named_config
 def colored_mnist(log_dir):
     dataset_tag = "ColoredMNIST"
     model_tag = "MLP_Product_Of_Experts"
-    main_num_steps = 235 * 100
+    num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
-    main_valid_freq = 235
-    main_log_freq = 10
+    main_valid_freq = 1
+    main_log_freq = 1
     main_tag = "ColoredMNIST"
     main_batch_size = 256
+    main_optimizer_tag = 'Adam'
+    main_learning_rate = 1e-3
+    main_weight_decay = 0.0
     log_dir = os.path.join(log_dir, 'colored_mnist')
-
 
 @ex.named_config
 def corrupted_cifar10(log_dir):
     dataset_tag = "CorruptedCIFAR10"
-    model_tag = 'ResNet32Skip'
+    model_tag = 'CCIFARDeCAMModel'
     target_attr_idx = 0
     bias_attr_idx = 1
-    main_num_steps = 196 * 200
-    main_valid_freq = 196
-    main_log_freq = 200
+    num_epochs = 200
+    main_valid_freq = 1
+    main_log_freq = 1
     main_batch_size = 256
     main_tag = "CorruptedCIFAR10"
-    gamma = None
+    main_optimizer_tag = 'Adam'
+    main_learning_rate = 1e-3
+    main_weight_decay = 0.0
     log_dir = os.path.join(log_dir, 'corrupted_cifar')
-
-
-@ex.named_config
-def celeba(log_dir):
-    dataset_tag = 'CelebA'
-    model_tag = 'ResNet18'
-    target_attr_idx = 9
-    bias_attr_idx = 20
-    main_num_steps = 636 * 200
-    main_valid_freq = 636
-    main_batch_size = 256
-    main_learning_rate = 1e-4
-    main_weight_decay = 1e-4
-    main_tag = 'CelebA-{}-{}'.format(target_attr_idx, bias_attr_idx)
-    log_dir = os.path.join(log_dir, 'celeba')
-
-
-@ex.named_config
-def bffhq(log_dir):
-    dataset_tag = 'BFFHQ'
-    model_tag = 'ResNet18'
-    target_attr_idx = 9
-    bias_attr_idx = 20
-    main_num_steps = 15000
-    main_valid_freq = 636
-    main_batch_size = 32
-    main_learning_rate = 1e-4
-    main_weight_decay = 0
-    main_tag = 'BFFHQ-{}-{}'.format(target_attr_idx, bias_attr_idx)
-    log_dir = os.path.join(log_dir, 'bffhq')
 
 
 @ex.named_config
