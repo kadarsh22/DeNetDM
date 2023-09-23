@@ -6,9 +6,8 @@ from torch.utils.data import Sampler
 from torchvision import transforms as T
 from torchvision.datasets.celeba import CelebA
 from data.attr_dataset import AttributeDataset
-from functools import reduce
-import math
-import warnings
+from PIL import Image
+from glob import glob
 
 
 class IdxDataset(Dataset):
@@ -41,15 +40,52 @@ class ZippedDataset(Dataset):
         return item
 
 
+class bFFHQDataset(Dataset):
+    def __init__(self, root, split, transform=None, image_path_list=None):
+        super(bFFHQDataset, self).__init__()
+        self.transform = transform
+        self.root = root
+
+        self.image2pseudo = {}
+        self.image_path_list = image_path_list
+
+        if split == 'train':
+            self.align = glob(os.path.join(root, split, 'align', "*", "*"))
+            self.conflict = glob(os.path.join(root, 'conflict', "*", "*"))
+            self.data = self.align + self.conflict
+
+        elif split == 'valid':
+            self.data = glob(os.path.join(os.path.dirname(root), split, "*"))
+
+        elif split == 'test':
+            self.data = glob(os.path.join(root, split, "*"))
+            data_conflict = []
+            for path in self.data:
+                target_label = path.split('/')[-1].split('.')[0].split('_')[1]
+                bias_label = path.split('/')[-1].split('.')[0].split('_')[2]
+                if target_label != bias_label:
+                    data_conflict.append(path)
+            # self.data = data_conflict  ## for evaluating only on conflicting points ##TODO
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        attr = torch.LongTensor(
+            [int(self.data[index].split('_')[-2]), int(self.data[index].split('_')[-1].split('.')[0])])
+        image = Image.open(self.data[index]).convert('RGB')
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return self.data[index], image, attr
+
+
 transforms = {
-    # "ColoredMNIST": {
-    #     "train": T.Compose([T.ToTensor()]),
-    #     "eval": T.Compose([T.ToTensor()])
-    #     },
     "ColoredMNIST": {
-        "train": T.Compose([T.ToPILImage(),T.Resize((28,28)),T.ToTensor()]),
-        "eval": T.Compose([T.ToPILImage(),T.Resize((28,28)),T.ToTensor()])
-        },
+        "train": T.Compose([T.ToPILImage(), T.Resize((28, 28)), T.ToTensor()]),
+        "eval": T.Compose([T.ToPILImage(), T.Resize((28, 28)), T.ToTensor()])
+    },
     "CorruptedCIFAR10": {
         "train_aug": T.Compose(
             [
@@ -76,19 +112,27 @@ transforms = {
             ]
         ),
     },
-    "Shapes3D": {
+    "bFFHQ": {
         "train": T.Compose([
+            T.Resize((224, 224)),
+            T.RandomCrop(224, padding=4),
+            T.RandomHorizontalFlip(),
             T.ToTensor(),
-            T.ToPILImage(),
-            T.Resize((32, 32)),
+            T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ]
+        ),
+        "valid": T.Compose([
+            T.Resize((224, 224)),
             T.ToTensor(),
-        ]),
+            T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ]
+        ),
         "eval": T.Compose([
+            T.Resize((224, 224)),
             T.ToTensor(),
-            T.ToPILImage(),
-            T.Resize((32, 32)),
-            T.ToTensor(),
-        ]),
+            T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ]
+        )
     },
     "CelebA": {
         "train": T.Compose(
@@ -114,16 +158,15 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
     dataset_category = dataset_tag.split("-")[0]
     root = os.path.join(data_dir, dataset_tag)
     transform = transforms[dataset_category][transform_split]
-    dataset_split = "valid" if (dataset_split == "eval") else dataset_split
+
     if dataset_tag == "CelebA":
         celeba_root = '/home/prathosh/data'
-        dataset = CelebA(
-            root=celeba_root,
-            split=dataset_split,
-            target_type="attr",
-            transform=transform,
-        )
+        dataset = CelebA(root=celeba_root, split=dataset_split, target_type="attr", transform=transform, )
+    elif dataset_tag == "bFFHQ":
+        dataset_split = "test" if (dataset_split == "eval") else dataset_split # different for bffhq and cmnist, ccifar10 ##todo
+        dataset = bFFHQDataset(root=root, split=dataset_split, transform=transform)
     else:
+        dataset_split = "valid" if (dataset_split == "eval") else dataset_split
         dataset = AttributeDataset(
             root=root, split=dataset_split, transform=transform
         )

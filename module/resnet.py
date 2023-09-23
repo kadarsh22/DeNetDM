@@ -25,6 +25,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
+from torchvision.models import resnet18
 
 from torch.autograd import Variable
 from collections import OrderedDict
@@ -37,6 +38,7 @@ __all__ = [
     "resnet56",
     "resnet110",
     "resnet1202",
+    "BFFHQDeCAMModel"
 ]
 
 
@@ -108,6 +110,26 @@ class BasicBlock(nn.Module):
         out = F.relu(out)
         return out
 
+
+class BFFHQDeCAMModel(nn.Module):
+    def __init__(self, num_classes=2):
+        super(BFFHQDeCAMModel, self).__init__()
+        self.bias_branch = resnet18(pretrained=True)
+        self.bias_branch.fc = nn.Linear(512, 64)
+
+        self.debias_branch = nn.Sequential(nn.Sequential(*list(resnet18(pretrained=True).children())[0:5]),
+                                           nn.AdaptiveAvgPool2d((1, 1)))
+        self.classifier = nn.Linear(64, num_classes)
+
+    def forward(self, x, debias_weight=1, bias_weight=1):
+        x_bias = self.bias_branch(x)
+        x_debias = self.debias_branch(x)
+        x_debias = torch.flatten(x_debias, start_dim=1)
+        feat = debias_weight * x_debias + bias_weight * x_bias
+        x = self.classifier(feat)
+        return x
+
+
 class ResNetFeatOnly(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
         super(ResNetFeatOnly, self).__init__()
@@ -140,6 +162,7 @@ class ResNetFeatOnly(nn.Module):
         out = F.avg_pool2d(out, out.size()[3])
         out = out.view(out.size(0), -1)
         return out
+
 
 class ResNetSkip(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
@@ -181,6 +204,7 @@ class ResNetSkip(nn.Module):
         out = self.linear(self.feature_weight * out + self.skip_weight * skip_out.view(out.size(0), -1))
         return out
 
+
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
         super(ResNet, self).__init__()
@@ -220,11 +244,14 @@ class ResNet(nn.Module):
 def resnet20(num_classes):
     return ResNet(BasicBlock, [3, 3, 3], num_classes)
 
+
 def resnet20_skip(num_classes):
     return ResNetSkip(BasicBlock, [3, 3, 3], num_classes)
 
+
 def resnet32():
     return ResNet(BasicBlock, [5, 5, 5])
+
 
 def resnet32_skip(num_classes):
     return ResNetSkip(BasicBlock, [9, 9, 9], num_classes)
