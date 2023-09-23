@@ -51,11 +51,11 @@ class bFFHQDataset(Dataset):
 
         if split == 'train':
             self.align = glob(os.path.join(root, split, 'align', "*", "*"))
-            self.conflict = glob(os.path.join(root, 'conflict', "*", "*"))
+            self.conflict = glob(os.path.join(root, split, 'conflict', "*", "*"))
             self.data = self.align + self.conflict
 
         elif split == 'valid':
-            self.data = glob(os.path.join(os.path.dirname(root), split, "*"))
+            self.data = glob(os.path.join(root, split, "*"))
 
         elif split == 'test':
             self.data = glob(os.path.join(root, split, "*"))
@@ -163,7 +163,8 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
         celeba_root = '/home/prathosh/data'
         dataset = CelebA(root=celeba_root, split=dataset_split, target_type="attr", transform=transform, )
     elif dataset_tag == "bFFHQ":
-        dataset_split = "test" if (dataset_split == "eval") else dataset_split # different for bffhq and cmnist, ccifar10 ##todo
+        dataset_split = "test" if (
+                    dataset_split == "eval") else dataset_split  # different for bffhq and cmnist, ccifar10 ##todo
         dataset = bFFHQDataset(root=root, split=dataset_split, transform=transform)
     else:
         dataset_split = "valid" if (dataset_split == "eval") else dataset_split

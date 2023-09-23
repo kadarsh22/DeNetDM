@@ -89,7 +89,7 @@ def train(
         shuffle=True,
         num_workers=16,
         pin_memory=True,
-        drop_last=True
+        drop_last=False
     )
 
     valid_loader = DataLoader(
@@ -132,7 +132,7 @@ def train(
     # define evaluation function
     def evaluate(model, data_loader, debias_weight=1, bias_weight=1):
         model.eval()
-        attrwise_acc_meter = MultiDimAverageMeter(2) ## attr_dims is also specfic to cmnist cifar10 ##todo
+        attrwise_acc_meter = MultiDimAverageMeter([2, 2]) ## attr_dims is also specfic to cmnist cifar10 ##todo
         for _, data, attr in tqdm(data_loader, leave=False):
             label = attr[:, target_attr_idx]
             data = data.to(device)
@@ -153,9 +153,11 @@ def train(
         accs = torch.mean(accs).item()
         return accs, accs_aligned, accs_conflict
 
+
     for epoch in range(num_epochs):
         model.train()
         for _, data, attr in tqdm(train_loader):
+
             data = data.to(device)
             attr = attr.to(device)
             label = attr[:, target_attr_idx]
@@ -183,6 +185,7 @@ def train(
                 skewed_loss = loss_per_sample[label != bias_attr].mean()
                 wandb.log({"loss-poe/train_skewed": skewed_loss})
 
+
         if (epoch % main_valid_freq) == 0:
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader)
             wandb.log({"acc-poe/valid": valid_accs})
@@ -194,7 +197,12 @@ def train(
             wandb.log({"acc-debiased-branch/valid_aligned": valid_aligned})
             wandb.log({"acc-debiased-branch/valid_skewed": valid_conflict})
 
+
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
             wandb.log({"acc-biased-branch/valid-branch1": valid_accs})
             wandb.log({"acc-biased-branch/valid_aligned": valid_aligned})
             wandb.log({"acc-biased-branch/valid_skewed": valid_conflict})
+
+
+
+
