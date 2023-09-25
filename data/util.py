@@ -66,13 +66,12 @@ class bFFHQDataset(Dataset):
                 if target_label != bias_label:
                     data_conflict.append(path)
             # self.data = data_conflict  ## for evaluating only on conflicting points ##TODO
-
+        self.attr = torch.stack([torch.LongTensor([int(self.data[index].split('_')[-2]), int(self.data[index].split('_')[-1].split('.')[0])]) for index in range(len(self.data))])
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index):
-        attr = torch.LongTensor(
-            [int(self.data[index].split('_')[-2]), int(self.data[index].split('_')[-1].split('.')[0])])
+        attr = self.attr[index]
         image = Image.open(self.data[index]).convert('RGB')
 
         if self.transform is not None:
@@ -168,8 +167,7 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
         dataset = bFFHQDataset(root=root, split=dataset_split, transform=transform)
     else:
         dataset_split = "valid" if (dataset_split == "eval") else dataset_split
-        dataset = AttributeDataset(
-            root=root, split=dataset_split, transform=transform
-        )
+        dataset = AttributeDataset(root=root, split=dataset_split, transform=transform)
+        dataset = IdxDataset(dataset)
 
     return dataset

@@ -69,7 +69,7 @@ def bffhq():
     main_valid_freq = 1
     main_log_freq = 1
     main_tag = "bffhq"
-    main_batch_size = 64
+    main_batch_size = 128
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-4
     main_weight_decay = 0.0

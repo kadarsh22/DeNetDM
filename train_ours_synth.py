@@ -55,7 +55,7 @@ def train(
 
     wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "corrupted_cifar10_ours"
+    wandb.run.name = "bffhq_resnet_like_skip"
     wandb.run.log_code(".")
     set_seed(seed=seed)
 
@@ -74,14 +74,11 @@ def train(
         dataset_split="eval",
         transform_split="eval"
     )
-    num_classes = 2  ##todo
-    # train_target_attr = train_dataset.attr[:, target_attr_idx]   ## these are specific to coloured mnist and cifar10 ##TODO
-    # train_bias_attr = train_dataset.attr[:, bias_attr_idx]
-    # attr_dims = [torch.max(train_target_attr).item() + 1, torch.max(train_bias_attr).item() + 1]
-    # num_classes = attr_dims[0]
-    #
-    # train_dataset = IdxDataset(train_dataset)
-    # valid_dataset = IdxDataset(valid_dataset)
+
+    train_target_attr = train_dataset.attr[:, target_attr_idx]
+    train_bias_attr = train_dataset.attr[:, bias_attr_idx]
+    attr_dims = [torch.max(train_target_attr).item() + 1, torch.max(train_bias_attr).item() + 1]
+    num_classes = attr_dims[0]
 
     train_loader = DataLoader(
         train_dataset,
@@ -89,7 +86,7 @@ def train(
         shuffle=True,
         num_workers=16,
         pin_memory=True,
-        drop_last=False
+        drop_last=True
     )
 
     valid_loader = DataLoader(
@@ -132,7 +129,7 @@ def train(
     # define evaluation function
     def evaluate(model, data_loader, debias_weight=1, bias_weight=1):
         model.eval()
-        attrwise_acc_meter = MultiDimAverageMeter([2, 2]) ## attr_dims is also specfic to cmnist cifar10 ##todo
+        attrwise_acc_meter = MultiDimAverageMeter(attr_dims)
         for _, data, attr in tqdm(data_loader, leave=False):
             label = attr[:, target_attr_idx]
             data = data.to(device)
@@ -153,11 +150,9 @@ def train(
         accs = torch.mean(accs).item()
         return accs, accs_aligned, accs_conflict
 
-
     for epoch in range(num_epochs):
         model.train()
         for _, data, attr in tqdm(train_loader):
-
             data = data.to(device)
             attr = attr.to(device)
             label = attr[:, target_attr_idx]
@@ -185,7 +180,6 @@ def train(
                 skewed_loss = loss_per_sample[label != bias_attr].mean()
                 wandb.log({"loss-poe/train_skewed": skewed_loss})
 
-
         if (epoch % main_valid_freq) == 0:
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader)
             wandb.log({"acc-poe/valid": valid_accs})
@@ -197,12 +191,7 @@ def train(
             wandb.log({"acc-debiased-branch/valid_aligned": valid_aligned})
             wandb.log({"acc-debiased-branch/valid_skewed": valid_conflict})
 
-
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
             wandb.log({"acc-biased-branch/valid-branch1": valid_accs})
             wandb.log({"acc-biased-branch/valid_aligned": valid_aligned})
             wandb.log({"acc-biased-branch/valid_skewed": valid_conflict})
-
-
-
-
