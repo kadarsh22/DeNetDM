@@ -55,7 +55,7 @@ def train(
 
     wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = "bffhq_resnet_like_skip"
+    wandb.run.name = 'Stage 1_' + dataset_tag + '_' + str(seed)
     wandb.run.log_code(".")
     set_seed(seed=seed)
 
@@ -79,6 +79,10 @@ def train(
     train_bias_attr = train_dataset.attr[:, bias_attr_idx]
     attr_dims = [torch.max(train_target_attr).item() + 1, torch.max(train_bias_attr).item() + 1]
     num_classes = attr_dims[0]
+    
+    if dataset_tag != "bFFHQ":
+        train_dataset = IdxDataset(train_dataset)
+        valid_dataset = IdxDataset(valid_dataset)
 
     train_loader = DataLoader(
         train_dataset,

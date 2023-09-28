@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from module.resnet import resnet20
+from torchvision.models import resnet18
 from collections import OrderedDict
 
 class MLPHiddenlayers(nn.Module):
@@ -67,4 +68,33 @@ class CCIFARDeCAMModel(nn.Module):
         return x
     
 
+class BFFHQDeCAMModel(nn.Module):
+    def __init__(self, num_classes=2):
+        super(BFFHQDeCAMModel, self).__init__()
+        self.bias_branch = resnet18(pretrained=True)
+        self.bias_branch.fc = nn.Identity()
+        for params in self.bias_branch.fc.parameters():
+            params.requires_grad = False
 
+        self.debias_branch_core = nn.Sequential(OrderedDict([('c1', nn.Conv2d(3, 64, kernel_size=(7, 7))),
+                                                             ('b1', nn.BatchNorm2d(64)), ('r1', nn.ReLU(inplace=True)),
+                                                             ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                                                             ('c2', nn.Conv2d(64, 128, kernel_size=(3, 3))),
+                                                             ('b2', nn.BatchNorm2d(128)), ('r2', nn.ReLU(inplace=True)),
+                                                             ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                                                             ('c3', nn.Conv2d(128, 512, kernel_size=(3, 3))),
+                                                             ('s3', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                                                             ('b3', nn.BatchNorm2d(512)), ('r3', nn.ReLU(inplace=True)),
+                                                             ('c4', nn.Conv2d(512, 512, kernel_size=(3, 3))),
+                                                             ('b4', nn.BatchNorm2d(512)),
+                                                             ('r4', nn.ReLU(inplace=True))]))
+        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.classifier = nn.Linear(512, num_classes)
+
+    def forward(self, x, debias_weight=1, bias_weight=1):
+        x_bias = self.bias_branch(x)
+        x_debias = self.avg_pool(self.debias_branch_core(x))
+        x_debias = torch.flatten(x_debias, start_dim=1)
+        feat = debias_weight * x_debias + bias_weight * x_bias
+        x = self.classifier(feat)
+        return x

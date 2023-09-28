@@ -6,4 +6,7 @@ python3 train_ours_synth.py with random_seed=5 colored_mnist skewed3 severity4
 python3 train_ours_synth.py with random_seed=5 corrupted_cifar10 type0 skewed3 severity4
 
 
+## BFFHQ
+python3 train_ours_synth.py with random_seed=5 bffhq
+
 
