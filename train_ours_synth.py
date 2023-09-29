@@ -53,9 +53,9 @@ def train(
     wandb.login()
     seed = random_seed
 
-    wandb.init(project="multibias-classifier-training", entity="causality-and-robustness-of-classifiers",
+    wandb.init(project="DeCAM", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = 'Stage 1_Stage2_Bias_freeze_' + dataset_tag + '_' + str(seed)
+    wandb.run.name = 'DeCAM_Stage 1_' + dataset_tag + '_seed_' + str(seed)
     wandb.run.log_code(".")
     set_seed(seed=seed)
 
@@ -154,6 +154,7 @@ def train(
         accs = torch.mean(accs).item()
         return accs, accs_aligned, accs_conflict
 
+    valid_conflict_best = 0
     for epoch in range(num_epochs):
         model.train()
         for _, data, attr in tqdm(train_loader):
@@ -170,7 +171,7 @@ def train(
 
             optimizer.step()
 
-        valid_conflict_best = 0
+        
         if (epoch % main_log_freq) == 0:
             loss = loss.detach().cpu()
             wandb.log({"loss-poe/train": loss})
@@ -196,44 +197,24 @@ def train(
             wandb.log({"acc-debiased-branch/valid_aligned": valid_aligned})
             wandb.log({"acc-debiased-branch/valid_skewed": valid_conflict})
             
-            if valid_conflict > valid_conflict_best:
-                save_path = os.path.join('results', dataset_tag, 'stage1')
-                os.makedirs(save_path, exist_ok=True)
-                torch.save(model.state_dict(), os.path.join(save_path, 'debiased_model.th'))
-                valid_conflict_best = valid_conflict
+            if dataset_tag != "bFFHQ":
+                if valid_accs > valid_conflict_best:
+                    save_path = os.path.join('results', dataset_tag, 'stage1')
+                    os.makedirs(save_path, exist_ok=True)
+                    torch.save(model.state_dict(), os.path.join(save_path, 'debiased_model.th'))
+                    valid_conflict_best = valid_accs
+                    wandb.log({"acc-debiased-branch/valid_best": valid_conflict_best})
+            else:
+                if valid_conflict > valid_conflict_best:
+                    save_path = os.path.join('results', dataset_tag, 'stage1')
+                    os.makedirs(save_path, exist_ok=True)
+                    torch.save(model.state_dict(), os.path.join(save_path, 'debiased_model.th'))
+                    valid_conflict_best = valid_conflict
+                    wandb.log({"acc-debiased-branch/valid_best": valid_conflict_best})
 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
             wandb.log({"acc-biased-branch/valid-branch1": valid_accs})
             wandb.log({"acc-biased-branch/valid_aligned": valid_aligned})
             wandb.log({"acc-biased-branch/valid_skewed": valid_conflict})
 
-    model_d = get_model(model_tag, num_classes).to(device)
-    model_d.load_state_dict(torch.load(os.path.join('results', dataset_tag, 'stage1', 'debiased_model.th')))
-    optimizer = torch.optim.Adam(model_d.debias_branch.parameters(), lr=main_learning_rate, weight_decay=main_weight_decay)
-    
-    for epoch in range(num_epochs):
-        model_d.train()
-        for _, data, attr in tqdm(train_loader):
-            data = data.to(device)
-            attr = attr.to(device)
-            label = attr[:, target_attr_idx]
-        
-            logit = model_d(data, debias_weight=1, bias_weight=1)
-            loss_per_sample = label_criterion(logit.squeeze(1), label)
-            loss = loss_per_sample.mean()
-
-            optimizer.zero_grad()
-            loss.backward()
-
-            optimizer.step()
-
-        if (epoch % main_log_freq) == 0:
-            loss = loss.detach().cpu()
-            wandb.log({"stage2/loss-model_d/train": loss})
-
-        if (epoch % main_valid_freq) == 0:
-            valid_accs, valid_aligned, valid_conflict = evaluate(model_d, valid_loader, debias_weight=1,
-                                                                 bias_weight=0)
-            wandb.log({"stage2/acc-debiased-branch/valid": valid_accs})
-            wandb.log({"stage2/acc-debiased-branch/valid_aligned": valid_aligned})
-            wandb.log({"stage2/acc-debiased-branch/valid_skewed": valid_conflict})
+  
