@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# get the sh file executable  chmod +x run.sh, run the sh file using chmod +x run.sh
+# get the sh file executable  chmod +x run.sh, run the sh file using nohup bash scripts/cmnist.sh &
 
 
 seeds=(274 87 5 5881 67)
