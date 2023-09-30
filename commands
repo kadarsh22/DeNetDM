@@ -1,12 +1,12 @@
 ## CMNIST
-python3 train_ours_synth.py with random_seed=5 colored_mnist skewed3 severity4
+python3 main.py with random_seed=274 colored_mnist skewed3 severity4
 
 
 ## CCIFAR10
-python3 train_ours_synth.py with random_seed=5 corrupted_cifar10 type0 skewed3 severity4
+python3 main.py with random_seed=274 corrupted_cifar10 type0 skewed3 severity4
 
 
 ## BFFHQ
-python3 train_ours_synth.py with random_seed=5 bffhq
+python3 main.py with random_seed=274 bffhq
 
 

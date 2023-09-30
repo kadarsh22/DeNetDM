@@ -27,7 +27,7 @@ def colored_mnist():
     data_dir = os.path.join('/vol/research/silpa/project1_bias/data/','cmnist')
     log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'cmnist')
     model_tag = "CMNISTDeCAMModel"
-    num_epochs = 100
+    num_epochs = 500
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
@@ -37,6 +37,11 @@ def colored_mnist():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
+
+    stage2_num_epochs = 500
+    stage2_main_batch_size = 256
+    stage2_main_learning_rate = 1e-3
+    stage2_main_weight_decay = 0.0
     
 
 @ex.named_config
@@ -45,7 +50,7 @@ def corrupted_cifar10():
     data_dir = os.path.join('/vol/research/silpa/project1_bias/data/','corrupted-cifar10')
     log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'corrupted_cifar')
     model_tag = 'CCIFARDeCAMModel'
-    num_epochs = 200
+    num_epochs = 500
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
@@ -56,6 +61,10 @@ def corrupted_cifar10():
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
 
+    stage2_num_epochs = 500
+    stage2_main_batch_size = 256
+    stage2_main_learning_rate = 1e-3
+    stage2_main_weight_decay = 0.0
 
 @ex.named_config
 def bffhq():
@@ -71,8 +80,13 @@ def bffhq():
     main_tag = "bffhq"
     main_batch_size = 32
     main_optimizer_tag = 'Adam'
-    main_learning_rate = 1e-4
+    main_learning_rate = 1e-3
     main_weight_decay = 0.0
+
+    stage2_num_epochs = 200
+    stage2_main_batch_size = 32
+    stage2_main_learning_rate = 1e-4
+    stage2_main_weight_decay = 0.0
     
 
 @ex.named_config

@@ -86,15 +86,6 @@ transforms = {
         "eval": T.Compose([T.ToPILImage(), T.Resize((28, 28)), T.ToTensor()])
     },
     "CorruptedCIFAR10": {
-        "train_aug": T.Compose(
-            [
-                T.ToPILImage(),
-                T.RandomCrop(32, padding=4),
-                T.RandomHorizontalFlip(),
-                T.ToTensor(),
-                T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-            ]
-        ),
         "train": T.Compose(
             [
                 T.ToPILImage(),
@@ -157,10 +148,7 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
     dataset_category = dataset_tag.split("-")[0]
     root = os.path.join(data_dir, dataset_tag)
     transform = transforms[dataset_category][transform_split]
-    if dataset_tag == "CelebA":
-        celeba_root = '/home/prathosh/data'
-        dataset = CelebA(root=celeba_root, split=dataset_split, target_type="attr", transform=transform, )
-    elif dataset_tag == "bFFHQ":
+    if dataset_tag == "bFFHQ":
         dataset_split = "test" if (
                     dataset_split == "eval") else dataset_split  # different for bffhq and cmnist, ccifar10 ##todo
         dataset = bFFHQDataset(root=root, split=dataset_split, transform=transform)
