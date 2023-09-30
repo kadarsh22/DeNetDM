@@ -37,7 +37,7 @@ def colored_mnist():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
-
+    
     stage2_num_epochs = 500
     stage2_main_batch_size = 256
     stage2_main_learning_rate = 1e-3

@@ -151,7 +151,7 @@ def train(
     train_loader = DataLoader(
         updated_train_dataset,
         batch_size=stage2_main_batch_size,
-        shuffle=False,
+        shuffle=True,
         drop_last=False
     )
     valid_best = 0
