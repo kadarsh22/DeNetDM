@@ -24,8 +24,8 @@ def get_config():
 @ex.named_config
 def colored_mnist():
     dataset_tag = "ColoredMNIST"
-    data_dir = os.path.join('/vol/research/silpa/project1_bias/data/','cmnist')
-    log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'cmnist')
+    data_dir = os.path.join('../data/','cmnist')
+    log_dir = os.path.join('../results', 'cmnist')
     model_tag = "CMNISTDeCAMModel"
     num_epochs = 500
     target_attr_idx = 0
@@ -47,8 +47,8 @@ def colored_mnist():
 @ex.named_config
 def corrupted_cifar10():
     dataset_tag = "CorruptedCIFAR10"
-    data_dir = os.path.join('/vol/research/silpa/project1_bias/data/','corrupted-cifar10')
-    log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'corrupted_cifar')
+    data_dir = os.path.join('../data/','corrupted-cifar10')
+    log_dir = os.path.join('../results', 'corrupted_cifar')
     model_tag = 'CCIFARDeCAMModel'
     num_epochs = 500
     target_attr_idx = 0
@@ -69,8 +69,8 @@ def corrupted_cifar10():
 @ex.named_config
 def bffhq():
     dataset_tag = "bFFHQ"
-    data_dir = os.path.join('/vol/research/silpa/project1_bias/data/', 'bffhq')
-    log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'bffhq')
+    data_dir = os.path.join('../data/', 'bffhq')
+    log_dir = os.path.join('../results', 'bffhq')
     model_tag = 'bFFHQDeCAMModel'
     num_epochs = 200
     target_attr_idx = 0

@@ -1,4 +1,4 @@
-from module.mlp import CCIFARDeCAMModel, CMNISTDeCAMModel, BFFHQDeCAMModel
+from module.model import CCIFARDeCAMModel, CMNISTDeCAMModel, BFFHQDeCAMModel
 
 
 def get_model(model_tag, num_classes):
