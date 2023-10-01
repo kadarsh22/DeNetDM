@@ -24,10 +24,10 @@ def get_config():
 @ex.named_config
 def colored_mnist():
     dataset_tag = "ColoredMNIST"
-    data_dir = os.path.join('/vol/research/silpa/project1_bias/data/','cmnist')
-    log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'cmnist')
+    data_dir = os.path.join('../data/','cmnist')
+    log_dir = os.path.join('results', 'cmnist')
     model_tag = "CMNISTDeCAMModel"
-    num_epochs = 500
+    num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
@@ -38,7 +38,7 @@ def colored_mnist():
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
 
-    stage2_num_epochs = 500
+    stage2_num_epochs = 100
     stage2_main_batch_size = 256
     stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 0.0
@@ -47,7 +47,7 @@ def colored_mnist():
 @ex.named_config
 def corrupted_cifar10():
     dataset_tag = "CorruptedCIFAR10"
-    data_dir = os.path.join('/vol/research/silpa/project1_bias/data/','corrupted-cifar10')
+    data_dir = os.path.join('/vol/research/silpa/propython3 main.py with random_seed=274 colored_mnist skewed3 severity4/data/','corrupted-cifar10')
     log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'corrupted_cifar')
     model_tag = 'CCIFARDeCAMModel'
     num_epochs = 500
@@ -69,18 +69,18 @@ def corrupted_cifar10():
 @ex.named_config
 def bffhq():
     dataset_tag = "bFFHQ"
-    data_dir = os.path.join('/vol/research/silpa/project1_bias/data/', 'bffhq')
-    log_dir = os.path.join('/vol/research/silpa/project1_bias/results', 'bffhq')
+    data_dir = os.path.join('../data/', 'bffhq')
+    log_dir = os.path.join('results', 'bffhq')
     model_tag = 'bFFHQDeCAMModel'
-    num_epochs = 200
+    num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
-    main_log_freq = 1
+    main_log_freq = 10
     main_tag = "bffhq"
-    main_batch_size = 32
+    main_batch_size = 64
     main_optimizer_tag = 'Adam'
-    main_learning_rate = 1e-3
+    main_learning_rate = 1e-4
     main_weight_decay = 0.0
 
     stage2_num_epochs = 200

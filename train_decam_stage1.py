@@ -3,15 +3,8 @@ from tqdm import tqdm
 import wandb
 import torch
 from torch.utils.data import DataLoader
-import warnings
-import torch.nn.functional as F
 from config import ex
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    from torch.utils.tensorboard import SummaryWriter
-
-
-from data.util import get_dataset, IdxDataset, NewDataset, transforms
+from data.util import get_dataset, IdxDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
 
@@ -106,6 +99,7 @@ def train(
     else:
         raise NotImplementedError
 
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10000, gamma=0.1)
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
     
     save_path = os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed))
@@ -137,6 +131,14 @@ def train(
     
     valid_conflict_best = 0
     valid_aligned_best = 0
+
+    # set all other train/ metrics to use this step
+    wandb.define_metric("acc-poe/*", step_metric="epoch")
+    wandb.define_metric("acc-debiased-branch/*", step_metric="epoch")
+    wandb.define_metric("acc-biased-branch/*", step_metric="epoch")
+    wandb.define_metric("loss-poe/*", step_metric="epoch")
+    
+    
     for epoch in range(num_epochs):
         model.train()
         for _, data, attr in tqdm(train_loader):
@@ -150,33 +152,33 @@ def train(
 
             optimizer.zero_grad()
             loss.backward()
-
             optimizer.step()
+            scheduler.step()
 
         if (epoch % main_log_freq) == 0:
             loss = loss.detach().cpu()
-            wandb.log({"loss-poe/train": loss})
+            wandb.log({"loss-poe/train": loss, "epoch": epoch})
 
             bias_attr = attr[:, bias_attr_idx]  # oracle
             loss_per_sample = loss_per_sample.detach()
             if (label == bias_attr).any().item():
                 aligned_loss = loss_per_sample[label == bias_attr].mean()
-                wandb.log({"loss-poe/train_aligned": aligned_loss})
+                wandb.log({"loss-poe/train_aligned": aligned_loss, "epoch": epoch})
 
             if (label != bias_attr).any().item():
                 skewed_loss = loss_per_sample[label != bias_attr].mean()
-                wandb.log({"loss-poe/train_skewed": skewed_loss})
+                wandb.log({"loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
         if (epoch % main_valid_freq) == 0:
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader)
-            wandb.log({"acc-poe/valid": valid_accs})
-            wandb.log({"acc-poe/valid_aligned": valid_aligned})
-            wandb.log({"acc-poe/valid_skewed": valid_conflict})
+            wandb.log({"acc-poe/valid": valid_accs, "epoch": epoch})
+            wandb.log({"acc-poe/valid_aligned": valid_aligned, "epoch": epoch})
+            wandb.log({"acc-poe/valid_skewed": valid_conflict, "epoch": epoch})
 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
-            wandb.log({"acc-debiased-branch/valid": valid_accs})
-            wandb.log({"acc-debiased-branch/valid_aligned": valid_aligned})
-            wandb.log({"acc-debiased-branch/valid_skewed": valid_conflict})
+            wandb.log({"acc-debiased-branch/valid": valid_accs, "epoch": epoch})
+            wandb.log({"acc-debiased-branch/valid_aligned": valid_aligned, "epoch": epoch})
+            wandb.log({"acc-debiased-branch/valid_skewed": valid_conflict, "epoch": epoch})
   
             # if dataset_tag != "bFFHQ":
             #     if valid_accs > valid_conflict_best:
@@ -188,19 +190,19 @@ def train(
                 debiased_model_path = os.path.join(save_path, 'debiased_model_stage1.th')
                 torch.save(model.state_dict(), debiased_model_path)
                 valid_conflict_best = valid_conflict
-                wandb.log({"acc-debiased-branch/valid_best": valid_conflict_best})
+                wandb.log({"acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
                 wandb.save(debiased_model_path)
                 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
-            wandb.log({"acc-biased-branch/valid-branch1": valid_accs})
-            wandb.log({"acc-biased-branch/valid_aligned": valid_aligned})
-            wandb.log({"acc-biased-branch/valid_skewed": valid_conflict})
+            wandb.log({"acc-biased-branch/valid-branch1": valid_accs, "epoch": epoch})
+            wandb.log({"acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
+            wandb.log({"acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
 
             if valid_aligned > valid_aligned_best:
                 biased_model_path =  os.path.join(save_path, 'biased_model_stage1.th')
                 torch.save(model.state_dict(), biased_model_path)
                 valid_aligned_best = valid_aligned
-                wandb.log({"acc-biased-branch/valid_best": valid_aligned_best})
+                wandb.log({"acc-biased-branch/valid_best": valid_aligned_best, "epoch": epoch})
                 wandb.save(biased_model_path)
                
 

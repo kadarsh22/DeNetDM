@@ -8,12 +8,7 @@ from torch.utils.data import DataLoader
 import warnings
 import torch.nn.functional as F
 from config import ex
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    from torch.utils.tensorboard import SummaryWriter
-
-
-from data.util import get_dataset, IdxDataset, NewDataset, transforms
+from data.util import get_dataset, IdxDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
 
@@ -158,6 +153,7 @@ def train(
         drop_last=False
     )
     valid_best = 0
+    wandb.define_metric("stage2/*", step_metric="epoch")
     for epoch in range(stage2_num_epochs):
         model_d.train()
         for _, data, attr in tqdm(train_loader):
@@ -180,22 +176,22 @@ def train(
         if (epoch % main_valid_freq) == 0:
             valid_accs, valid_aligned, valid_conflict = evaluate(model_d, valid_loader, debias_weight=1,
                                                                  bias_weight=0)
-            wandb.log({"stage2/acc-debiased-branch/valid": valid_accs})
-            wandb.log({"stage2/acc-debiased-branch/valid_aligned": valid_aligned})
-            wandb.log({"stage2/acc-debiased-branch/valid_skewed": valid_conflict})
+            wandb.log({"stage2/acc-debiased-branch/valid": valid_accs, "epoch": epoch})
+            wandb.log({"stage2/acc-debiased-branch/valid_aligned": valid_aligned, "epoch": epoch})
+            wandb.log({"stage2/acc-debiased-branch/valid_skewed": valid_conflict, "epoch": epoch})
 
             best_model_path = os.path.join(save_path, 'debiased_model_stage2.th')
             if dataset_tag != "bFFHQ":
                 if valid_accs > valid_best:
                     torch.save(model_d.state_dict(), best_model_path)
                     valid_best = valid_accs
-                    wandb.log({"acc-debiased-branch/valid_best": valid_best})
+                    wandb.log({"acc-debiased-branch/valid_best": valid_best, "epoch": epoch})
                     wandb.save(best_model_path)
             else:
                 if valid_conflict > valid_best:
                     torch.save(model_d.state_dict(), best_model_path)
                     valid_best = valid_conflict
-                    wandb.log({"acc-debiased-branch/valid_best": valid_best})
+                    wandb.log({"acc-debiased-branch/valid_best": valid_best, "epoch": epoch})
                     wandb.save(best_model_path)
 
 
