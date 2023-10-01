@@ -8,6 +8,9 @@ from torch.utils.data import DataLoader
 import warnings
 import torch.nn.functional as F
 from config import ex
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+   
 from data.util import get_dataset, IdxDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
@@ -66,9 +69,8 @@ def train(
     attr_dims = [torch.max(train_target_attr).item() + 1, torch.max(train_bias_attr).item() + 1]
     num_classes = attr_dims[0]
     
-    if dataset_tag != "bFFHQ":
-        train_dataset = IdxDataset(train_dataset)
-        valid_dataset = IdxDataset(valid_dataset)
+    train_dataset = IdxDataset(train_dataset)
+    valid_dataset = IdxDataset(valid_dataset)
 
     train_loader = DataLoader(
         train_dataset,
@@ -184,12 +186,14 @@ def train(
             if dataset_tag != "bFFHQ":
                 if valid_accs > valid_best:
                     torch.save(model_d.state_dict(), best_model_path)
+                    torch.save(model_d.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage2.th'))
                     valid_best = valid_accs
                     wandb.log({"acc-debiased-branch/valid_best": valid_best, "epoch": epoch})
                     wandb.save(best_model_path)
             else:
                 if valid_conflict > valid_best:
                     torch.save(model_d.state_dict(), best_model_path)
+                    torch.save(model_d.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage2.th'))
                     valid_best = valid_conflict
                     wandb.log({"acc-debiased-branch/valid_best": valid_best, "epoch": epoch})
                     wandb.save(best_model_path)
