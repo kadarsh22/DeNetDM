@@ -29,6 +29,8 @@ def train(
         main_optimizer_tag,
         main_learning_rate,
         main_weight_decay,
+        decay_ratio,
+        decay_steps
 ):
     print('Beginning Stage 1')
     device = torch.device(device)
@@ -100,7 +102,7 @@ def train(
     else:
         raise NotImplementedError
 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10000, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=decay_steps, gamma=decay_ratio)
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
     
     save_path = os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed))
@@ -187,20 +189,11 @@ def train(
                 torch.save(model.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage1.th'))
                 valid_conflict_best = valid_conflict
                 wandb.log({"acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
-                wandb.save(debiased_model_path)
                 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
             wandb.log({"acc-biased-branch/valid-branch1": valid_accs, "epoch": epoch})
             wandb.log({"acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
-
-            if valid_aligned > valid_aligned_best:
-                biased_model_path =  os.path.join(save_path, 'biased_model_stage1.th')
-                torch.save(model.state_dict(), os.path.join(wandb.run.dir, 'biased_model_stage1.th'))
-                torch.save(model.state_dict(), biased_model_path)
-                valid_aligned_best = valid_aligned
-                wandb.log({"acc-biased-branch/valid_best": valid_aligned_best, "epoch": epoch})
-                wandb.save(biased_model_path)
                
 
    

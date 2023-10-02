@@ -37,8 +37,10 @@ def colored_mnist():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
+    decay_steps = 10000
+    decay_ratio = 0.5
     
-    stage2_num_epochs = 500
+    stage2_num_epochs = 100
     stage2_main_batch_size = 256
     stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 0.0
@@ -50,7 +52,7 @@ def corrupted_cifar10():
     data_dir = os.path.join('../data/','corrupted-cifar10')
     log_dir = os.path.join('../results', 'corrupted_cifar')
     model_tag = 'CCIFARDeCAMModel'
-    num_epochs = 500
+    num_epochs = 200
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
@@ -60,8 +62,10 @@ def corrupted_cifar10():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
+    decay_steps = 10000
+    decay_ratio = 0.5
 
-    stage2_num_epochs = 500
+    stage2_num_epochs = 200
     stage2_main_batch_size = 256
     stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 0.0
@@ -82,9 +86,12 @@ def bffhq():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-4
     main_weight_decay = 0.0
+    decay_ratio = 0.1
+    decay_steps = 10000
+    
 
-    stage2_num_epochs = 200
-    stage2_main_batch_size = 32
+    stage2_num_epochs = 100
+    stage2_main_batch_size = 64
     stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
     

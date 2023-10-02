@@ -91,7 +91,7 @@ def train(
     )
 
     model_b = get_model(model_tag, num_classes).to(device)
-    model_b.load_state_dict(torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'biased_model_stage1.th')))
+    model_b.load_state_dict(torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')))
 
     model_d = get_model(model_tag, num_classes).to(device)
     model_d.load_state_dict(torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')))
@@ -189,14 +189,12 @@ def train(
                     torch.save(model_d.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage2.th'))
                     valid_best = valid_accs
                     wandb.log({"acc-debiased-branch/valid_best": valid_best, "epoch": epoch})
-                    wandb.save(best_model_path)
             else:
                 if valid_conflict > valid_best:
                     torch.save(model_d.state_dict(), best_model_path)
                     torch.save(model_d.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage2.th'))
                     valid_best = valid_conflict
                     wandb.log({"acc-debiased-branch/valid_best": valid_best, "epoch": epoch})
-                    wandb.save(best_model_path)
 
 
   
