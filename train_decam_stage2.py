@@ -142,6 +142,10 @@ def train(
 
     accs, accs_aligned, accs_conflict = evaluate(model_d, valid_loader, debias_weight=1, bias_weight=0)
     print('Accuracy Train : %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
+    
+    wandb.log({"stage2/acc-debiased-branch/valid": accs, "epoch": -1})
+    wandb.log({"stage2/acc-debiased-branch/valid_aligned": accs_aligned, "epoch": -1})
+    wandb.log({"stage2/acc-debiased-branch/valid_skewed": accs_conflict, "epoch": -1})  
 
     accs, accs_aligned, accs_conflict = evaluate(model_b, train_loader, debias_weight=0, bias_weight=1)
     print('Accuracy Train : %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
