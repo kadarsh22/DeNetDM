@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="cmnist_ours" type="PythonConfigurationType" factoryName="Python" folderName="cmnist">
+  <configuration default="false" name="cmnist_ours" type="PythonConfigurationType" factoryName="Python" folderName="cmnist" singleton="false">
     <module name="LfF" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -13,7 +13,7 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
-    <option name="PARAMETERS" value="with random_seed=87 colored_mnist skewed3 severity4" />
+    <option name="PARAMETERS" value="with random_seed=5881 colored_mnist skewed3 severity4" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
