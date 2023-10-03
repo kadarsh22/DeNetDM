@@ -7,6 +7,7 @@ import torch
 import os
 import wandb
 
+
 def set_seed(seed: int = 172) -> None:
     np.random.seed(seed)
     random.seed(seed)
@@ -18,6 +19,7 @@ def set_seed(seed: int = 172) -> None:
     # Set a fixed value for the hash seed
     os.environ["PYTHONHASHSEED"] = str(seed)
     print(f"Random seed set as {seed}")
+
 
 @ex.automain
 def main(random_seed, dataset_tag):
@@ -31,4 +33,3 @@ def main(random_seed, dataset_tag):
     set_seed(seed=seed)
     train()
     train_stage2()
-    

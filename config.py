@@ -42,7 +42,7 @@ def colored_mnist():
     
     stage2_num_epochs = 100
     stage2_main_batch_size = 256
-    stage2_main_learning_rate = 1e-3
+    stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
     
 
@@ -67,7 +67,7 @@ def corrupted_cifar10():
 
     stage2_num_epochs = 200
     stage2_main_batch_size = 256
-    stage2_main_learning_rate = 1e-3
+    stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
 
 @ex.named_config

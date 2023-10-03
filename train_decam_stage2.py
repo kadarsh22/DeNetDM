@@ -1,32 +1,13 @@
 import os
 from tqdm import tqdm
 import wandb
-import random
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
-import warnings
 import torch.nn.functional as F
 from config import ex
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-   
 from data.util import get_dataset, IdxDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
-
-
-def set_seed(seed: int = 172) -> None:
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    # When running on the CuDNN backend, two further options must be set
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    # Set a fixed value for the hash seed
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    print(f"Random seed set as {seed}")
 
 
 @ex.capture
@@ -46,6 +27,8 @@ def train(
         stage2_main_batch_size,
         stage2_main_learning_rate,
         stage2_main_weight_decay,
+        decay_ratio,
+        decay_steps
 ):
     print('Beginning Stage 2')
     device = torch.device(device)
@@ -68,7 +51,7 @@ def train(
     train_bias_attr = train_dataset.attr[:, bias_attr_idx]
     attr_dims = [torch.max(train_target_attr).item() + 1, torch.max(train_bias_attr).item() + 1]
     num_classes = attr_dims[0]
-    
+
     train_dataset = IdxDataset(train_dataset)
     valid_dataset = IdxDataset(valid_dataset)
 
@@ -78,7 +61,7 @@ def train(
         shuffle=True,
         num_workers=16,
         pin_memory=True,
-        drop_last=True
+        drop_last=False
     )
 
     valid_loader = DataLoader(
@@ -91,18 +74,22 @@ def train(
     )
 
     model_b = get_model(model_tag, num_classes).to(device)
-    model_b.load_state_dict(torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')))
+    model_b.load_state_dict(
+        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')))
 
     model_d = get_model(model_tag, num_classes).to(device)
-    model_d.load_state_dict(torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')))
+    model_d.load_state_dict(
+        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')))
 
-    optimizer = torch.optim.Adam(model_d.parameters(), lr=stage2_main_learning_rate, weight_decay=stage2_main_weight_decay)
+    optimizer = torch.optim.Adam(model_d.parameters(), lr=stage2_main_learning_rate,
+                                 weight_decay=stage2_main_weight_decay)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=decay_steps, gamma=decay_ratio)
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
     save_path = os.path.join(log_dir, dataset_tag, 'stage2', str(random_seed))
     os.makedirs(save_path, exist_ok=True)
 
-     # # define evaluation function
+    # # define evaluation function
     def evaluate(model, data_loader, debias_weight=1, bias_weight=1):
         model.eval()
         attrwise_acc_meter = MultiDimAverageMeter(attr_dims)
@@ -137,18 +124,16 @@ def train(
                 outputs = F.softmax(model_b_eval(data, debias_weight=0, bias_weight=1), dim=1)
                 _, predicted = torch.max(outputs.data, 1)
                 misclassified = (predicted != label).long()
-                pseudo_conflict_indices = torch.cat((pseudo_conflict_indices, idx[misclassified==1].to(device))).long()
+                pseudo_conflict_indices = torch.cat(
+                    (pseudo_conflict_indices, idx[misclassified == 1].to(device))).long()
         return pseudo_conflict_indices
 
     accs, accs_aligned, accs_conflict = evaluate(model_d, valid_loader, debias_weight=1, bias_weight=0)
-    print('Accuracy Train : %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
-    
-    wandb.log({"stage2/acc-debiased-branch/valid": accs, "epoch": -1})
-    wandb.log({"stage2/acc-debiased-branch/valid_aligned": accs_aligned, "epoch": -1})
-    wandb.log({"stage2/acc-debiased-branch/valid_skewed": accs_conflict, "epoch": -1})  
+    print('Accuracy valid Model_D: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
 
+    # set all other train/ metrics to use this step
     accs, accs_aligned, accs_conflict = evaluate(model_b, train_loader, debias_weight=0, bias_weight=1)
-    print('Accuracy Train : %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
+    print('Accuracy Train Model_B: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
 
     misclassified_indices = get_misclassified_data_loader(model_b, train_loader)
     updated_train_dataset = torch.utils.data.Subset(train_dataset, misclassified_indices)
@@ -158,7 +143,7 @@ def train(
         shuffle=True,
         drop_last=False
     )
-    valid_best = 0
+    valid_conflict_best = 0
     wandb.define_metric("stage2/*", step_metric="epoch")
     for epoch in range(stage2_num_epochs):
         model_d.train()
@@ -167,7 +152,7 @@ def train(
             attr = attr.to(device)
             label = attr[:, target_attr_idx]
 
-            logit = model_d(data, debias_weight=1, bias_weight=0)
+            logit = model_d(data)
             loss_per_sample = label_criterion(logit.squeeze(1), label)
             loss = loss_per_sample.mean()
 
@@ -176,30 +161,38 @@ def train(
             optimizer.step()
 
         if (epoch % main_log_freq) == 0:
-            loss = loss.item()
-            wandb.log({"stage2/loss-model_d/train": loss})
+            loss = loss.detach().cpu()
+            wandb.log({"stage2/loss-poe/train": loss, "epoch": epoch})
+
+            bias_attr = attr[:, bias_attr_idx]  # oracle
+            loss_per_sample = loss_per_sample.detach()
+            if (label == bias_attr).any().item():
+                aligned_loss = loss_per_sample[label == bias_attr].mean()
+                wandb.log({"stage2/loss-poe/train_aligned": aligned_loss, "epoch": epoch})
+
+            if (label != bias_attr).any().item():
+                skewed_loss = loss_per_sample[label != bias_attr].mean()
+                wandb.log({"stage2/loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
         if (epoch % main_valid_freq) == 0:
-            valid_accs, valid_aligned, valid_conflict = evaluate(model_d, valid_loader, debias_weight=1,
-                                                                 bias_weight=0)
+            valid_accs, valid_aligned, valid_conflict = evaluate(model_d, valid_loader)
+            wandb.log({"stage2/acc-poe/valid": valid_accs, "epoch": epoch})
+            wandb.log({"stage2/acc-poe/valid_aligned": valid_aligned, "epoch": epoch})
+            wandb.log({"stage2/acc-poe/valid_skewed": valid_conflict, "epoch": epoch})
+
+            valid_accs, valid_aligned, valid_conflict = evaluate(model_d, valid_loader, debias_weight=1, bias_weight=0)
             wandb.log({"stage2/acc-debiased-branch/valid": valid_accs, "epoch": epoch})
             wandb.log({"stage2/acc-debiased-branch/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"stage2/acc-debiased-branch/valid_skewed": valid_conflict, "epoch": epoch})
 
-            best_model_path = os.path.join(save_path, 'debiased_model_stage2.th')
-            if dataset_tag != "bFFHQ":
-                if valid_accs > valid_best:
-                    torch.save(model_d.state_dict(), best_model_path)
-                    torch.save(model_d.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage2.th'))
-                    valid_best = valid_accs
-                    wandb.log({"acc-debiased-branch/valid_best": valid_best, "epoch": epoch})
-            else:
-                if valid_conflict > valid_best:
-                    torch.save(model_d.state_dict(), best_model_path)
-                    torch.save(model_d.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage2.th'))
-                    valid_best = valid_conflict
-                    wandb.log({"acc-debiased-branch/valid_best": valid_best, "epoch": epoch})
+            if valid_conflict > valid_conflict_best:
+                debiased_model_path = os.path.join(save_path, 'debiased_model_stage1_twice.th')
+                torch.save(model_d.state_dict(), debiased_model_path)
+                torch.save(model_d.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage1_twice.th'))
+                valid_conflict_best = valid_conflict
+                wandb.log({"stage2/acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
 
-
-  
-
+            valid_accs, valid_aligned, valid_conflict = evaluate(model_d, valid_loader, debias_weight=0, bias_weight=1)
+            wandb.log({"stage2/acc-biased-branch/valid-branch1": valid_accs, "epoch": epoch})
+            wandb.log({"stage2/acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
+            wandb.log({"stage2/acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
