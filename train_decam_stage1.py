@@ -3,11 +3,7 @@ from tqdm import tqdm
 import wandb
 import torch
 from torch.utils.data import DataLoader
-import warnings
 from config import ex
-
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
 from data.util import get_dataset, IdxDataset
 from module.util import get_model
 from util import MultiDimAverageMeter

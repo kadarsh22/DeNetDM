@@ -1,4 +1,4 @@
-from module.model import CCIFARDeCAMModel, CMNISTDeCAMModel, BFFHQDeCAMModel
+from module.model import CCIFARDeCAMModel, CMNISTDeCAMModel, BFFHQDeCAMModel , CelebADeCAMModel
 
 
 def get_model(model_tag, num_classes):
@@ -9,6 +9,9 @@ def get_model(model_tag, num_classes):
     elif model_tag == 'bFFHQDeCAMModel':
         assert num_classes == 2
         model =  BFFHQDeCAMModel(num_classes=num_classes)
+    elif model_tag == 'CelebADeCAMModel':
+        assert num_classes == 2
+        model = CelebADeCAMModel(num_classes=num_classes)
     else:
         raise NotImplementedError
     return model
