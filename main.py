@@ -1,11 +1,11 @@
-from train_decam_stage1 import train
-from train_decam_stage2 import train as train_stage2
-from config import ex
+import os
+import wandb
 import random
 import numpy as np
 import torch
-import os
-import wandb
+from config import ex
+from train_decam_stage1 import train as train_stage1
+from train_decam_stage2 import train as train_stage2
 
 
 def set_seed(seed: int = 172) -> None:
@@ -31,5 +31,5 @@ def main(random_seed, dataset_tag):
     wandb.run.name = 'DeCAM_' + dataset_tag + '_seed_' + str(seed)
     wandb.run.log_code(".")
     set_seed(seed=seed)
-    train()
+    # train_stage1()
     train_stage2()
