@@ -76,11 +76,6 @@ class BFFHQDeCAMModel(nn.Module):
     def __init__(self, num_classes=2):
         super(BFFHQDeCAMModel, self).__init__()
         self.bias_branch = resnet18(pretrained=False)
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():
             params.requires_grad = False
@@ -103,12 +98,11 @@ class CelebADeCAMModel(nn.Module):
     def __init__(self, num_classes=2):
         super(CelebADeCAMModel, self).__init__()
         self.bias_branch = resnet18(pretrained=True)
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():
             params.requires_grad = False
 
-<<<<<<< HEAD
+
         # self.debias_branch = nn.Sequential(OrderedDict([('c1', nn.Conv2d(3, 64, kernel_size=(7, 7))),
         #                                                      ('b1', nn.BatchNorm2d(64)), ('r1', nn.ReLU(inplace=True)),
         #                                                      ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
@@ -123,7 +117,6 @@ class CelebADeCAMModel(nn.Module):
         #                                                      ('r4', nn.ReLU(inplace=True))]))
         self.debias_branch =  nn.Sequential(*list(resnet18(pretrained=False).children())[0:5])
         self.dim_transform = nn.Linear(64, 512)
-=======
         self.debias_branch = nn.Sequential(OrderedDict([('c1', nn.Conv2d(3, 64, kernel_size=(7, 7))),
                                                         ('b1', nn.BatchNorm2d(64)), ('r1', nn.ReLU(inplace=True)),
                                                         ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
@@ -136,10 +129,7 @@ class CelebADeCAMModel(nn.Module):
                                                         ('c4', nn.Conv2d(512, 512, kernel_size=(3, 3))),
                                                         ('b4', nn.BatchNorm2d(512)),
                                                         ('r4', nn.ReLU(inplace=True))]))
-<<<<<<< HEAD
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
-=======
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
+
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Linear(512, num_classes)
 

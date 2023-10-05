@@ -39,15 +39,10 @@ def colored_mnist():
     main_weight_decay = 0.0
     decay_steps = 10000
     decay_ratio = 0.5
-<<<<<<< HEAD
-<<<<<<< HEAD
     use_scheduler= False 
-=======
     use_scheduler = False
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
-=======
     use_scheduler = False
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
+
     
     stage2_num_epochs = 500
     stage2_main_batch_size = 256
@@ -99,19 +94,14 @@ def bffhq():
     decay_ratio = 0.1
     decay_steps = 10000
     use_scheduler = False
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
-    
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
+
 
     stage2_num_epochs = 100
     stage2_main_batch_size = 256
     stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 0.0
     
+
 @ex.named_config
 def celeba():
     dataset_tag = "CelebA"
@@ -135,33 +125,6 @@ def celeba():
     stage2_main_batch_size = 64
     stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
-<<<<<<< HEAD
-=======
-    
-@ex.named_config
-def celeba():
-    dataset_tag = "CelebA"
-    data_dir = os.path.join('../data/')
-    log_dir = os.path.join('../results', 'celeba')
-    model_tag = 'CelebADeCAMModel'
-    num_epochs = 50
-    target_attr_idx = 9
-    bias_attr_idx = 20
-    main_valid_freq = 1
-    main_log_freq = 10
-    main_tag = "CelebA"
-    main_batch_size = 64
-    main_optimizer_tag = 'Adam'
-    main_learning_rate = 1e-4
-    main_weight_decay = 1e-4
-    decay_ratio = 0.1
-    decay_steps = 10000
-
-    stage2_num_epochs = 50
-    stage2_main_batch_size = 64
-    stage2_main_learning_rate = 1e-4
-    stage2_main_weight_decay = 0.0
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
 
 
 @ex.named_config

@@ -31,14 +31,6 @@ def main(random_seed, dataset_tag):
     wandb.run.name = 'DeCAM_stage1' + dataset_tag + '_seed_' + str(seed)
     wandb.run.log_code(".")
     set_seed(seed=seed)
-<<<<<<< HEAD
-<<<<<<< HEAD
-    train()
-    # train_stage2()
 
-=======
-=======
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
-    # train_stage1()
-    train_stage2()
->>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
+    train_stage1()
+    # train_stage2()

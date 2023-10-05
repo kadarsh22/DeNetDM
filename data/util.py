@@ -2,7 +2,6 @@ import os
 from torch.utils.data.dataset import Dataset
 from data.attr_dataset import AttributeDataset
 from data.bffhq import bFFHQDataset
-from data.celeba import CelebA
 from data.transforms import transforms
 
 
