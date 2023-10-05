@@ -3,11 +3,7 @@ from tqdm import tqdm
 import wandb
 import torch
 from torch.utils.data import DataLoader
-import warnings
 from config import ex
-
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
 from data.util import get_dataset, IdxDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
@@ -97,12 +93,21 @@ def train(
         #                              {'params': model.avg_pool.parameters(),'lr': 1e-2}
         #                               ],
         #                             lr=main_learning_rate,
+<<<<<<< HEAD
         #                             weight_decay=main_weight_decay,  
         # )
         optimizer = torch.optim.Adam(model.parameters(),
                                     lr=main_learning_rate,
                                     weight_decay=main_weight_decay,  
         )
+=======
+        #                             weight_decay=main_weight_decay,
+        # )
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=main_learning_rate,
+                                     weight_decay=main_weight_decay,
+                                     )
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
     elif main_optimizer_tag == "AdamW":
         optimizer = torch.optim.AdamW(
             model.parameters(),
@@ -143,7 +148,10 @@ def train(
         return accs, accs_aligned, accs_conflict
 
     valid_conflict_best = 0
+<<<<<<< HEAD
    
+=======
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
 
     # set all other train/ metrics to use this step
     wandb.define_metric("acc-poe/*", step_metric="epoch")
@@ -209,7 +217,11 @@ def train(
             wandb.log({"acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
 
+<<<<<<< HEAD
          # ##Training accuracies
+=======
+            # ##Training accuracies
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
             valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader)
             wandb.log({"train-acc/acc-poe/train": valid_accs, "epoch": epoch})
             wandb.log({"train-acc/acc-poe/train_aligned": valid_aligned, "epoch": epoch})
@@ -219,13 +231,20 @@ def train(
             wandb.log({"train-acc/acc-debiased-branch/train": valid_accs, "epoch": epoch})
             wandb.log({"train-acc/acc-debiased-branch/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-debiased-branch/train_skewed": valid_conflict, "epoch": epoch})
+<<<<<<< HEAD
   
                 
+=======
+
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
             valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader, debias_weight=0, bias_weight=1)
             wandb.log({"train-acc/acc-biased-branch/train-branch1": valid_accs, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_skewed": valid_conflict, "epoch": epoch})
+<<<<<<< HEAD
                
 
 
     
+=======
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
