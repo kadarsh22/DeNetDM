@@ -39,6 +39,7 @@ def colored_mnist():
     main_weight_decay = 0.0
     decay_steps = 10000
     decay_ratio = 0.5
+    use_scheduler = False
     
     stage2_num_epochs = 100
     stage2_main_batch_size = 256
@@ -64,6 +65,7 @@ def corrupted_cifar10():
     main_weight_decay = 0.0
     decay_steps = 10000
     decay_ratio = 0.5
+    use_scheduler = False
 
     stage2_num_epochs = 200
     stage2_main_batch_size = 256
@@ -88,6 +90,7 @@ def bffhq():
     main_weight_decay = 0.0
     decay_ratio = 0.1
     decay_steps = 10000
+    use_scheduler = False
     
 
     stage2_num_epochs = 100
