@@ -94,6 +94,7 @@ def train(
         #                               ],
         #                             lr=main_learning_rate,
 <<<<<<< HEAD
+<<<<<<< HEAD
         #                             weight_decay=main_weight_decay,  
         # )
         optimizer = torch.optim.Adam(model.parameters(),
@@ -101,12 +102,17 @@ def train(
                                     weight_decay=main_weight_decay,  
         )
 =======
+=======
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
         #                             weight_decay=main_weight_decay,
         # )
         optimizer = torch.optim.Adam(model.parameters(),
                                      lr=main_learning_rate,
                                      weight_decay=main_weight_decay,
                                      )
+<<<<<<< HEAD
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
+=======
 >>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
     elif main_optimizer_tag == "AdamW":
         optimizer = torch.optim.AdamW(
@@ -149,7 +155,10 @@ def train(
 
     valid_conflict_best = 0
 <<<<<<< HEAD
+<<<<<<< HEAD
    
+=======
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
 =======
 >>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
 
@@ -218,7 +227,11 @@ def train(
             wandb.log({"acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
 
 <<<<<<< HEAD
+<<<<<<< HEAD
          # ##Training accuracies
+=======
+            # ##Training accuracies
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
 =======
             # ##Training accuracies
 >>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
@@ -232,8 +245,12 @@ def train(
             wandb.log({"train-acc/acc-debiased-branch/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-debiased-branch/train_skewed": valid_conflict, "epoch": epoch})
 <<<<<<< HEAD
+<<<<<<< HEAD
   
                 
+=======
+
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
 =======
 
 >>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
@@ -242,9 +259,12 @@ def train(
             wandb.log({"train-acc/acc-biased-branch/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_skewed": valid_conflict, "epoch": epoch})
 <<<<<<< HEAD
+<<<<<<< HEAD
                
 
 
     
+=======
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
 =======
 >>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26

@@ -77,7 +77,10 @@ class BFFHQDeCAMModel(nn.Module):
         super(BFFHQDeCAMModel, self).__init__()
         self.bias_branch = resnet18(pretrained=False)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():
             params.requires_grad = False
@@ -133,6 +136,9 @@ class CelebADeCAMModel(nn.Module):
                                                         ('c4', nn.Conv2d(512, 512, kernel_size=(3, 3))),
                                                         ('b4', nn.BatchNorm2d(512)),
                                                         ('r4', nn.ReLU(inplace=True))]))
+<<<<<<< HEAD
+>>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
+=======
 >>>>>>> 63bfb80f374a3ae13bb1fd2d7fe6ba6077604e26
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Linear(512, num_classes)
