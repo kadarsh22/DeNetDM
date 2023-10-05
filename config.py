@@ -27,7 +27,7 @@ def colored_mnist():
     data_dir = os.path.join('../data/','cmnist')
     log_dir = os.path.join('../results', 'cmnist')
     model_tag = "CMNISTDeCAMModel"
-    num_epochs = 100
+    num_epochs = 500
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
@@ -39,8 +39,9 @@ def colored_mnist():
     main_weight_decay = 0.0
     decay_steps = 10000
     decay_ratio = 0.5
+    use_scheduler= False 
     
-    stage2_num_epochs = 100
+    stage2_num_epochs = 500
     stage2_main_batch_size = 256
     stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
@@ -76,23 +77,23 @@ def bffhq():
     data_dir = os.path.join('../data/', 'bffhq')
     log_dir = os.path.join('../results', 'bffhq')
     model_tag = 'bFFHQDeCAMModel'
-    num_epochs = 100
+    num_epochs = 500
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
     main_log_freq = 10
     main_tag = "bffhq"
-    main_batch_size = 64
+    main_batch_size = 256
     main_optimizer_tag = 'Adam'
-    main_learning_rate = 1e-4
+    main_learning_rate = 1e-3
     main_weight_decay = 0.0
     decay_ratio = 0.1
     decay_steps = 10000
-    
+    use_scheduler = False
 
     stage2_num_epochs = 100
-    stage2_main_batch_size = 64
-    stage2_main_learning_rate = 1e-4
+    stage2_main_batch_size = 256
+    stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 0.0
     
 

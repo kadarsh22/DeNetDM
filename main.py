@@ -28,8 +28,9 @@ def main(random_seed, dataset_tag):
 
     wandb.init(project="DeCAM", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = 'DeCAM_' + dataset_tag + '_seed_' + str(seed)
+    wandb.run.name = 'DeCAM_stage1' + dataset_tag + '_seed_' + str(seed)
     wandb.run.log_code(".")
     set_seed(seed=seed)
     train()
-    train_stage2()
+    # train_stage2()
+
