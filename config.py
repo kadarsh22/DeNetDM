@@ -78,16 +78,16 @@ def corrupted_cifar10():
 @ex.named_config
 def bffhq():
     dataset_tag = "bFFHQ"
-    data_dir = os.path.join('../data/', 'bffhq')
-    log_dir = os.path.join('../results', 'bffhq')
+    data_dir = os.path.join('/home/silpavs/decam/data/', 'bffhq')
+    log_dir = os.path.join('/home/silpavs/decam/results', 'bffhq')
     model_tag = 'bFFHQDeCAMModel'
-    num_epochs = 500
+    num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
-    main_log_freq = 10
+    main_log_freq = 1
     main_tag = "bffhq"
-    main_batch_size = 256
+    main_batch_size = 64
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0

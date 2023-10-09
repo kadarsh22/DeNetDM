@@ -3,3 +3,4 @@ __pycache__
 results/*
 pretrained_models/*
 artifacts/*
+nohup*.out

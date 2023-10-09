@@ -24,9 +24,6 @@ def get_dataset(dataset_tag, data_dir, dataset_split, transform_split):
         dataset_split = "test" if (dataset_split == "eval") else dataset_split
         # different for bffhq and cmnist, ccifar10 ##todo
         dataset = bFFHQDataset(root=root, split=dataset_split, transform=transform)
-    elif dataset_tag == 'CelebA':
-        dataset_split = "valid" if (dataset_split == "eval") else dataset_split
-        dataset = CelebA(root=root, split=dataset_split, target_type="attr", transform=transform, )
     else:
         dataset_split = "valid" if (dataset_split == "eval") else dataset_split
         dataset = AttributeDataset(root=root, split=dataset_split, transform=transform)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from module.resnet import resnet20
-from torchvision.models import resnet18
+from torchvision.models import resnet18, resnet34
 from collections import OrderedDict
 
 
@@ -80,18 +80,33 @@ class BFFHQDeCAMModel(nn.Module):
         for params in self.bias_branch.fc.parameters():
             params.requires_grad = False
 
-        self.debias_branch = nn.Sequential(*list(resnet18(pretrained=False).children())[0:5])
-        self.dim_transform = nn.Linear(64, 512)
+        self.debias_branch = nn.Sequential(
+            OrderedDict([
+                         ('c3', nn.Conv2d(3, 128, kernel_size=(7,7))),
+                         ('b3', nn.BatchNorm2d(128)), ('r3', nn.ReLU()),
+                         ('s3', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                         ('c4', nn.Conv2d(128, 256, kernel_size=(7, 7))),
+                         ('b4', nn.BatchNorm2d(256)), ('r4', nn.ReLU()),  
+                         ('s4', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                         ('c5', nn.Conv2d(256, 512, kernel_size=(7, 7))),
+                         ('b5', nn.BatchNorm2d(512)), ('r5', nn.ReLU()),
+                         ('s5', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                         ('c6', nn.Conv2d(512, 512, kernel_size=(7, 7))),
+                         ('b6', nn.BatchNorm2d(512)), ('r6', nn.ReLU())]))
+        # self.dim_transform = nn.Linear(256, 512)
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Linear(512, num_classes)
 
     def forward(self, x, debias_weight=1, bias_weight=1):
         x_bias = self.bias_branch(x)
         x_debias = self.avg_pool(self.debias_branch(x))
-        x_debias = self.dim_transform(torch.flatten(x_debias, start_dim=1))
+        x_debias = torch.flatten(x_debias, start_dim=1)
+
+        # x_debias = self.dim_transform(torch.flatten(x_debias, start_dim=1))
         feat = debias_weight * x_debias + bias_weight * x_bias
         x = self.classifier(feat)
         return x
+
 
 
 class CelebADeCAMModel(nn.Module):
