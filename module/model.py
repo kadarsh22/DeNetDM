@@ -93,19 +93,20 @@ class BFFHQDeCAMModel(nn.Module):
         if stage == '1':
             self.debias_branch = nn.Sequential(
             OrderedDict([
-                         ('c3', nn.Conv2d(3, 128, kernel_size=(7,7))),
-                         ('b3', nn.BatchNorm2d(128)), ('r3', nn.ReLU()),
-                         ('s3', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                         ('c4', nn.Conv2d(128, 256, kernel_size=(7, 7))),
-                         ('b4', nn.BatchNorm2d(256)), ('r4', nn.ReLU()),  
-                         ('s4', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                         ('c5', nn.Conv2d(256, 512, kernel_size=(7, 7))),
-                         ('b5', nn.BatchNorm2d(512)), ('r5', nn.ReLU()),
-                         ('s5', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                         ('c6', nn.Conv2d(512, 512, kernel_size=(7, 7))),
-                         ('b6', nn.BatchNorm2d(512)), ('r6', nn.ReLU()),
-                         ('a1',  nn.AdaptiveAvgPool2d((1, 1))),
-                         ('f1', nn.Flatten(start_dim=1))]))
+                        ('c1', nn.Conv2d(3, 64, kernel_size=(7, 7))),
+                        ('b1', nn.BatchNorm2d(64)), ('r1', nn.ReLU(inplace=True)),
+                        ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                        ('c2', nn.Conv2d(64, 128, kernel_size=(3, 3))),
+                        ('b2', nn.BatchNorm2d(128)), ('r2', nn.ReLU(inplace=True)),
+                        ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                        ('c3', nn.Conv2d(128, 512, kernel_size=(3, 3))),
+                        ('s3', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                        ('b3', nn.BatchNorm2d(512)), ('r3', nn.ReLU(inplace=True)),
+                        ('c4', nn.Conv2d(512, 512, kernel_size=(3, 3))),
+                        ('b4', nn.BatchNorm2d(512)),
+                        ('r4', nn.ReLU(inplace=True)),
+                        ('a1',  nn.AdaptiveAvgPool2d((1, 1))),
+                        ('f1', nn.Flatten(start_dim=1))]))
         
         elif stage == '2':
             self.debias_branch = resnet18(pretrained=True)
