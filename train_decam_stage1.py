@@ -27,10 +27,7 @@ def train(
         main_log_freq,
         main_optimizer_tag,
         main_learning_rate,
-        main_weight_decay,
-        decay_ratio,
-        decay_steps,
-        use_scheduler
+        main_weight_decay  
 ):
     print('Beginning Stage 1')
     device = torch.device(device)
@@ -86,7 +83,7 @@ def train(
     )
 
     # define model and optimizer
-    model = get_model(model_tag, num_classes).to(device)
+    model = get_model(model_tag, num_classes, stage='1').to(device)
     print(model)
 
     if main_optimizer_tag == "SGD":
@@ -97,14 +94,6 @@ def train(
             momentum=0.9,
         )
     elif main_optimizer_tag == "Adam":
-        # optimizer = torch.optim.Adam([{'params': model.debias_branch.parameters(), 'lr': 1e-2},
-        #                               {'params': model.avg_pool.parameters(),'lr': 1e-2},
-        #                               {'params': model.classifier.parameters()},
-        #                               {'params': model.bias_branch.parameters()}
-        #                               ],
-        #                             lr=main_learning_rate,
-        #                             weight_decay=main_weight_decay,  
-        # )
         optimizer = torch.optim.Adam(model.parameters(),
                                     lr=main_learning_rate,
                                     weight_decay=main_weight_decay)
@@ -118,7 +107,6 @@ def train(
     else:
         raise NotImplementedError
 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=decay_steps, gamma=decay_ratio)
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
     save_path = os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed))
@@ -148,22 +136,7 @@ def train(
         accs = torch.mean(accs).item()
         return accs, accs_aligned, accs_conflict
     
-    def get_misclassifications(model_b_eval, loader):
-        model_b_eval.eval()
-        misclassified_label_stats = torch.tensor([]).to(device)
-        for idx, data, attr in loader:
-            data = data.to(device)
-            attr = attr.to(device)
-            label = attr[:, target_attr_idx].to(device)
-            with torch.no_grad():
-                outputs = F.softmax(model_b_eval(data, debias_weight=0, bias_weight=1), dim=1)
-                _, predicted = torch.max(outputs.data, 1)
-                misclassified = (predicted != label).long()
-                misclassified_label_stats = torch.cat((misclassified_label_stats, attr[misclassified == 1].to(device)))
-        misclassified_zeros = (misclassified_label_stats[:, target_attr_idx] == 0).sum()
-        misclassified_ones = (misclassified_label_stats[:, target_attr_idx] == 1).sum()
-        return misclassified_zeros, misclassified_ones
-    
+
     valid_conflict_best = 0
 
     # set all other train/ metrics to use this step
@@ -172,7 +145,7 @@ def train(
     wandb.define_metric("acc-biased-branch/*", step_metric="epoch")
     wandb.define_metric("loss-poe/*", step_metric="epoch")
     wandb.define_metric("train-acc/*", step_metric="epoch")
-    wandb.define_metric("misclassify-stats/*", step_metric="epoch")
+   
     
     for epoch in range(num_epochs):
         model.train()
@@ -190,8 +163,7 @@ def train(
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if use_scheduler:
-                scheduler.step()
+           
 
         if (epoch % main_log_freq) == 0:
             loss = loss.detach().cpu()
@@ -223,7 +195,6 @@ def train(
                 debiased_model_path = os.path.join(save_path, 'debiased_model_stage1.th')
                 torch.save(model.state_dict(), debiased_model_path)
                 wandb.save(debiased_model_path)
-                # torch.save(model.state_dict(), os.path.join(wandb.run.dir, 'debiased_model_stage1.th'))
                 valid_conflict_best = valid_conflict
                 wandb.log({"acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
 
@@ -232,12 +203,7 @@ def train(
             wandb.log({"acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
             
-
          # ##Training accuracies
-
-            zeros, ones = get_misclassifications(model, train_loader_for_eval)
-            wandb.log({"misclassify-stats/zeros": zeros, "epoch": epoch})
-            wandb.log({"misclassify-stats/ones": ones, "epoch": epoch})
 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval)
             wandb.log({"train-acc/acc-poe/train": valid_accs, "epoch": epoch})
@@ -253,3 +219,4 @@ def train(
             wandb.log({"train-acc/acc-biased-branch/train-branch1": valid_accs, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_skewed": valid_conflict, "epoch": epoch})
+

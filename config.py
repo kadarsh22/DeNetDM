@@ -53,10 +53,10 @@ def colored_mnist():
 @ex.named_config
 def corrupted_cifar10():
     dataset_tag = "CorruptedCIFAR10"
-    data_dir = os.path.join('../data/','corrupted-cifar10')
-    log_dir = os.path.join('../results', 'corrupted_cifar')
+    data_dir = os.path.join('../data/', 'corrupted-cifar10')
+    log_dir = os.path.join('results', 'corrupted-cifar10')
     model_tag = 'CCIFARDeCAMModel'
-    num_epochs = 200
+    num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
@@ -66,20 +66,20 @@ def corrupted_cifar10():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
-    decay_steps = 10000
-    decay_ratio = 0.5
-    use_scheduler = False
-
+   
     stage2_num_epochs = 200
     stage2_main_batch_size = 256
     stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
+    stage2_poe_weight=1
+    stage2_dist_weight = 1
+    stage2_T = 2
 
 @ex.named_config
 def bffhq():
     dataset_tag = "bFFHQ"
-    data_dir = os.path.join('/home/silpavs/decam/data/', 'bffhq')
-    log_dir = os.path.join('/home/silpavs/decam/results', 'bffhq')
+    data_dir = os.path.join('../data/', 'bffhq')
+    log_dir = os.path.join('results', 'bffhq')
     model_tag = 'bFFHQDeCAMModel'
     num_epochs = 100
     target_attr_idx = 0
@@ -91,40 +91,14 @@ def bffhq():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
-    decay_ratio = 0.1
-    decay_steps = 10000
-    use_scheduler = False
-
 
     stage2_num_epochs = 100
-    stage2_main_batch_size = 256
+    stage2_main_batch_size = 64
     stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 0.0
-    
-
-@ex.named_config
-def celeba():
-    dataset_tag = "CelebA"
-    data_dir = os.path.join('../data/')
-    log_dir = os.path.join('../results', 'celeba')
-    model_tag = 'CelebADeCAMModel'
-    num_epochs = 50
-    target_attr_idx = 9
-    bias_attr_idx = 20
-    main_valid_freq = 1
-    main_log_freq = 10
-    main_tag = "CelebA"
-    main_batch_size = 64
-    main_optimizer_tag = 'Adam'
-    main_learning_rate = 1e-4
-    main_weight_decay = 1e-4
-    decay_ratio = 0.1
-    decay_steps = 10000
-
-    stage2_num_epochs = 50
-    stage2_main_batch_size = 64
-    stage2_main_learning_rate = 1e-4
-    stage2_main_weight_decay = 0.0
+    stage2_poe_weight=1
+    stage2_dist_weight = 1
+    stage2_T = 2
 
 
 @ex.named_config

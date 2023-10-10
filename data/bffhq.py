@@ -11,8 +11,6 @@ class bFFHQDataset(Dataset):
         self.transform = transform
         self.root = root
         
-        print(self.root)
-        
         self.image2pseudo = {}
         self.image_path_list = image_path_list
 
@@ -21,9 +19,6 @@ class bFFHQDataset(Dataset):
             self.conflict = glob(os.path.join(root, split, 'conflict', "*", "*"))
             self.data = self.align + self.conflict
             
-       
-           
-         
         elif split == 'valid':
             self.data = glob(os.path.join(root, split, "*"))
 

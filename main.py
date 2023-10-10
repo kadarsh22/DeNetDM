@@ -33,4 +33,4 @@ def main(random_seed, dataset_tag):
     set_seed(seed=seed)
 
     train_stage1()
-    # train_stage2()
+    train_stage2()

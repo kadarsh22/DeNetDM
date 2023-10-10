@@ -42,23 +42,34 @@ class CMNISTDeCAMModel(nn.Module):
 
 
 class CCIFARDeCAMModel(nn.Module):
-    def __init__(self, num_classes=10):
+    def __init__(self, num_classes=10, stage='1'):
         super(CCIFARDeCAMModel, self).__init__()
         self.bias_branch = resnet20(num_classes=num_classes)
         self.bias_branch.linear = nn.Identity()
 
         for params in self.bias_branch.linear.parameters():
             params.requires_grad = False
-
-        self.debias_branch = nn.Sequential(
-            OrderedDict([('c1', nn.Conv2d(3, 32, kernel_size=(5, 5))),
-                         ('b1', nn.BatchNorm2d(32)), ('r1', nn.ReLU()),
-                         ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                         ('c2', nn.Conv2d(32, 64, kernel_size=(5, 5))),
-                         ('b2', nn.BatchNorm2d(64)), ('r2', nn.ReLU()),
-                         ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                         ('c3', nn.Conv2d(64, 64, kernel_size=(5, 5))),
-                         ('b3', nn.BatchNorm2d(64)), ('r3', nn.ReLU())]))
+        if stage == '1':
+            self.debias_branch = nn.Sequential(
+                OrderedDict([('c1', nn.Conv2d(3, 32, kernel_size=(5, 5))),
+                            ('b1', nn.BatchNorm2d(32)), ('r1', nn.ReLU()),
+                            ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                            ('c2', nn.Conv2d(32, 64, kernel_size=(5, 5))),
+                            ('b2', nn.BatchNorm2d(64)), ('r2', nn.ReLU()),
+                            ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                            ('c3', nn.Conv2d(64, 64, kernel_size=(5, 5))),
+                            ('b3', nn.BatchNorm2d(64)), ('r3', nn.ReLU()),
+                            ('f1', nn.Flatten(start_dim=1))]))
+        elif stage == '2':
+            self.debias_backbone = resnet18(pretrained=True)
+            self.debias_backbone.fc = nn.Identity()
+            for params in self.debias_backbone.fc.parameters():
+                params.requires_grad = False
+            self.debias_branch = nn.Sequential(
+                    OrderedDict([('b1', self.debias_backbone),
+                                 ('l1', nn.Linear(512,64))])
+                )
+                
 
         self.classifier = nn.Linear(64, num_classes)
         self.act = nn.ReLU()
@@ -66,21 +77,21 @@ class CCIFARDeCAMModel(nn.Module):
     def forward(self, x, debias_weight=1, bias_weight=1):
         x_bias = self.bias_branch(x)
         x_debias = self.debias_branch(x)
-        x_debias = torch.flatten(x_debias, start_dim=1)
         feat = debias_weight * x_debias + bias_weight * x_bias
         x = self.classifier(feat)
         return x
 
 
 class BFFHQDeCAMModel(nn.Module):
-    def __init__(self, num_classes=2):
+    def __init__(self, num_classes=2, stage='1'):
         super(BFFHQDeCAMModel, self).__init__()
         self.bias_branch = resnet18(pretrained=False)
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():
             params.requires_grad = False
 
-        self.debias_branch = nn.Sequential(
+        if stage == '1':
+            self.debias_branch = nn.Sequential(
             OrderedDict([
                          ('c3', nn.Conv2d(3, 128, kernel_size=(7,7))),
                          ('b3', nn.BatchNorm2d(128)), ('r3', nn.ReLU()),
@@ -92,17 +103,20 @@ class BFFHQDeCAMModel(nn.Module):
                          ('b5', nn.BatchNorm2d(512)), ('r5', nn.ReLU()),
                          ('s5', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
                          ('c6', nn.Conv2d(512, 512, kernel_size=(7, 7))),
-                         ('b6', nn.BatchNorm2d(512)), ('r6', nn.ReLU())]))
-        # self.dim_transform = nn.Linear(256, 512)
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+                         ('b6', nn.BatchNorm2d(512)), ('r6', nn.ReLU()),
+                         ('a1',  nn.AdaptiveAvgPool2d((1, 1))),
+                         ('f1', nn.Flatten(start_dim=1))]))
+        
+        elif stage == '2':
+            self.debias_branch = resnet18(pretrained=True)
+            self.debias_branch.fc = nn.Identity()
+            for params in self.debias_branch.fc.parameters():
+                params.requires_grad = False
         self.classifier = nn.Linear(512, num_classes)
 
     def forward(self, x, debias_weight=1, bias_weight=1):
         x_bias = self.bias_branch(x)
-        x_debias = self.avg_pool(self.debias_branch(x))
-        x_debias = torch.flatten(x_debias, start_dim=1)
-
-        # x_debias = self.dim_transform(torch.flatten(x_debias, start_dim=1))
+        x_debias = self.debias_branch(x)
         feat = debias_weight * x_debias + bias_weight * x_bias
         x = self.classifier(feat)
         return x
