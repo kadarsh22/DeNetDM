@@ -81,7 +81,7 @@ def bffhq():
     data_dir = os.path.join('../data/', 'bffhq')
     log_dir = os.path.join('results', 'bffhq')
     model_tag = 'bFFHQDeCAMModel'
-    num_epochs = 100
+    num_epochs = 10
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
@@ -94,10 +94,10 @@ def bffhq():
 
     stage2_num_epochs = 100
     stage2_main_batch_size = 64
-    stage2_main_learning_rate = 1e-3
+    stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
     stage2_poe_weight=1
-    stage2_dist_weight = 1
+    stage2_dist_weight = 0
     stage2_T = 2
 
 

@@ -64,7 +64,7 @@ def train(
         shuffle=True,
         num_workers=16,
         pin_memory=True,
-        drop_last=True
+        drop_last=False
     )
 
     valid_loader = DataLoader(
