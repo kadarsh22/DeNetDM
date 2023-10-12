@@ -2,7 +2,6 @@ import os
 import logging
 from sacred import Experiment
 
-
 ex = Experiment("main")
 logger = logging.getLogger("debias")
 ch = logging.StreamHandler()
@@ -19,15 +18,15 @@ ex.logger = logger
 def get_config():
     device = 0
     random_seed = 67
-    
-    
+
+
 @ex.named_config
 def colored_mnist():
     dataset_tag = "ColoredMNIST"
-    data_dir = os.path.join('../data/','cmnist')
-    log_dir = os.path.join('../results', 'cmnist')
+    data_dir = os.path.join('../data/', 'cmnist')
+    log_dir = os.path.join('results', 'cmnist')
     model_tag = "CMNISTDeCAMModel"
-    num_epochs = 500
+    num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
@@ -37,18 +36,15 @@ def colored_mnist():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
-    decay_steps = 10000
-    decay_ratio = 0.5
-    use_scheduler= False 
-    use_scheduler = False
-    use_scheduler = False
 
-    
-    stage2_num_epochs = 500
+    stage2_num_epochs = 100
     stage2_main_batch_size = 256
-    stage2_main_learning_rate = 1e-4
+    stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 0.0
-    
+    stage2_poe_weight = 1
+    stage2_dist_weight = 1
+    stage2_T = 2
+
 
 @ex.named_config
 def corrupted_cifar10():
@@ -66,14 +62,15 @@ def corrupted_cifar10():
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
     main_weight_decay = 0.0
-   
+
     stage2_num_epochs = 200
     stage2_main_batch_size = 256
     stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
-    stage2_poe_weight=1
+    stage2_poe_weight = 1
     stage2_dist_weight = 1
     stage2_T = 2
+
 
 @ex.named_config
 def bffhq():
@@ -96,7 +93,7 @@ def bffhq():
     stage2_main_batch_size = 64
     stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 0.0
-    stage2_poe_weight=1
+    stage2_poe_weight = 1
     stage2_dist_weight = 0
     stage2_T = 2
 

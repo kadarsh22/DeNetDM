@@ -3,7 +3,7 @@ from module.model import CCIFARDeCAMModel, CMNISTDeCAMModel, BFFHQDeCAMModel , C
 
 def get_model(model_tag, num_classes, stage='1'):
     if model_tag == "CMNISTDeCAMModel":
-        model = CMNISTDeCAMModel(debias_layers=3, bias_layers=5, num_classes=num_classes)
+        model = CMNISTDeCAMModel(debias_layers=3, bias_layers=5, num_classes=num_classes, stage=stage)
     elif model_tag == 'CCIFARDeCAMModel':
         model =  CCIFARDeCAMModel(num_classes=num_classes, stage=stage)
     elif model_tag == 'bFFHQDeCAMModel':
