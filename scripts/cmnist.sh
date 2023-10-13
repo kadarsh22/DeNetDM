@@ -5,8 +5,8 @@
 
 seeds=(274 87 5 5881 67)
 
-for seed in "${seeds[@]}"; do 
+for seed in "${seeds[@]}"; do
     echo "Running for seed ${seed}"
-    python3 -u main.py with random_seed=${seed} colored_mnist skewed3 severity4; 
+    python3 -u main.py with random_seed=${seed} colored_mnist skewed3 severity4;
 done
 

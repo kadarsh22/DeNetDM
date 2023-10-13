@@ -26,19 +26,19 @@ def colored_mnist():
     data_dir = os.path.join('../data/', 'cmnist')
     log_dir = os.path.join('results', 'cmnist')
     model_tag = "CMNISTDeCAMModel"
-    num_epochs = 100
+    num_epochs = 25
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1
     main_log_freq = 1
     main_tag = "ColoredMNIST"
-    main_batch_size = 256
+    main_batch_size = 64
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
-    main_weight_decay = 0.0
+    main_weight_decay = 1e-3
 
     stage2_num_epochs = 100
-    stage2_main_batch_size = 256
+    stage2_main_batch_size = 64
     stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 0.0
     stage2_poe_weight = 1

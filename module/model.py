@@ -20,22 +20,23 @@ class MLPHiddenlayers(nn.Module):
 
 
 class CMNISTDeCAMModel(nn.Module):
-    def __init__(self, debias_layers=3, bias_layers=5, num_classes=10, stage='1'):
+    def __init__(self, debias_hidden_layers=3, bias_hidden_layers=5, num_classes=10, stage='1'):
         super(CMNISTDeCAMModel, self).__init__()
         if stage == '1':
-            self.debias_branch = nn.Sequential(nn.Linear(3 * 28 * 28, 100),
-                                               nn.ReLU(),
-                                               MLPHiddenlayers(num_layers=debias_layers - 2)
-                                               )
+            self.debias_branch = nn.Sequential(
+                OrderedDict([('c1', nn.Linear(3 * 28 * 28, 100)),
+                             ('r1', nn.ReLU()),
+                             ('s1', MLPHiddenlayers(num_layers=debias_hidden_layers - 2))]))
+
         elif stage == '2':
-            self.debias_branch = nn.Sequential(nn.Linear(3 * 28 * 28, 100),
-                                               nn.ReLU(),
-                                               MLPHiddenlayers(num_layers=3)
-                                               )
+            self.debias_branch = nn.Sequential(
+                OrderedDict([('c2', nn.Linear(3 * 28 * 28, 100)),
+                             ('r2', nn.ReLU()),
+                             ('s2', MLPHiddenlayers(num_layers=bias_hidden_layers - 2))]))
 
         self.bias_branch = nn.Sequential(nn.Linear(3 * 28 * 28, 100),
                                          nn.ReLU(),
-                                         MLPHiddenlayers(num_layers=bias_layers - 2)
+                                         MLPHiddenlayers(num_layers=bias_hidden_layers - 2)
                                          )
         self.classifier = nn.Linear(100, num_classes)
 
