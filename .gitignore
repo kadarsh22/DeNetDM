@@ -4,3 +4,4 @@ results/*
 pretrained_models/*
 artifacts/*
 nohup*.out
+.nfs*
