@@ -24,7 +24,7 @@ def set_seed(seed: int = 172) -> None:
 @ex.automain
 def main(random_seed, dataset_tag):
     wandb.login()
-    seed = random_seed
+    seed = random.randint(0,10000)
 
     wandb.init(project="DeCAM", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
@@ -32,5 +32,5 @@ def main(random_seed, dataset_tag):
     wandb.run.log_code(".")
     set_seed(seed=seed)
 
-    train_stage1()
-    train_stage2()
+    train_stage1(random_seed=seed)
+    train_stage2(random_seed=seed)
