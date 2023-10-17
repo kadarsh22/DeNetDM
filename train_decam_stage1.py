@@ -1,4 +1,6 @@
 import os
+import sys
+
 from tqdm import tqdm
 import wandb
 import torch
@@ -27,7 +29,7 @@ def train(
         main_log_freq,
         main_optimizer_tag,
         main_learning_rate,
-        main_weight_decay  
+        main_weight_decay
 ):
     print('Beginning Stage 1')
     device = torch.device(device)
@@ -72,7 +74,6 @@ def train(
         drop_last=False
     )
 
-
     valid_loader = DataLoader(
         valid_dataset,
         batch_size=main_batch_size,
@@ -95,8 +96,8 @@ def train(
         )
     elif main_optimizer_tag == "Adam":
         optimizer = torch.optim.Adam(model.parameters(),
-                                    lr=main_learning_rate,
-                                    weight_decay=main_weight_decay)
+                                     lr=main_learning_rate,
+                                     weight_decay=main_weight_decay)
 
     elif main_optimizer_tag == "AdamW":
         optimizer = torch.optim.AdamW(
@@ -135,7 +136,6 @@ def train(
         accs_conflict = accs[eye_tsr == 0.0].mean().item()
         accs = torch.mean(accs).item()
         return accs, accs_aligned, accs_conflict
-    
 
     valid_conflict_best = 0
 
@@ -145,17 +145,15 @@ def train(
     wandb.define_metric("acc-biased-branch/*", step_metric="epoch")
     wandb.define_metric("loss-poe/*", step_metric="epoch")
     wandb.define_metric("train-acc/*", step_metric="epoch")
-   
-    
+    idx = 0
     for epoch in range(num_epochs):
         model.train()
-        
+
         for _, data, attr in tqdm(train_loader):
-    
             data = data.to(device)
             attr = attr.to(device)
             label = attr[:, target_attr_idx]
-        
+
             logit = model(data)
             loss_per_sample = label_criterion(logit.squeeze(1), label)
             loss = loss_per_sample.mean()
@@ -163,7 +161,11 @@ def train(
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-           
+            debiased_model_path = os.path.join(save_path, str(idx) + 'debiased_model_stage1.th')
+            torch.save(model.state_dict(), debiased_model_path)
+            idx = idx + 1
+            if idx == 10:
+                sys.exit()
 
         if (epoch % main_log_freq) == 0:
             loss = loss.detach().cpu()
@@ -179,7 +181,6 @@ def train(
                 skewed_loss = loss_per_sample[label != bias_attr].mean()
                 wandb.log({"loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
-            
         if (epoch % main_valid_freq) == 0:
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader)
             wandb.log({"acc-poe/valid": valid_accs, "epoch": epoch})
@@ -202,21 +203,22 @@ def train(
             wandb.log({"acc-biased-branch/valid-branch1": valid_accs, "epoch": epoch})
             wandb.log({"acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
-            
-         # ##Training accuracies
+
+            # ##Training accuracies
 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval)
             wandb.log({"train-acc/acc-poe/train": valid_accs, "epoch": epoch})
             wandb.log({"train-acc/acc-poe/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-poe/train_skewed": valid_conflict, "epoch": epoch})
 
-            valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval, debias_weight=1, bias_weight=0)
+            valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval, debias_weight=1,
+                                                                 bias_weight=0)
             wandb.log({"train-acc/acc-debiased-branch/train": valid_accs, "epoch": epoch})
             wandb.log({"train-acc/acc-debiased-branch/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-debiased-branch/train_skewed": valid_conflict, "epoch": epoch})
 
-            valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval, debias_weight=0, bias_weight=1)
+            valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval, debias_weight=0,
+                                                                 bias_weight=1)
             wandb.log({"train-acc/acc-biased-branch/train-branch1": valid_accs, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_skewed": valid_conflict, "epoch": epoch})
-

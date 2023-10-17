@@ -6,6 +6,7 @@ import torch
 from config import ex
 from train_decam_stage1 import train as train_stage1
 from train_decam_stage2 import train as train_stage2
+from inductive_bias_analysis import train as analyse_inductive_bias
 
 
 def set_seed(seed: int = 172) -> None:
@@ -32,5 +33,6 @@ def main(random_seed, dataset_tag):
     wandb.run.log_code(".")
     set_seed(seed=seed)
 
-    train_stage1()
-    train_stage2()
+    analyse_inductive_bias()
+    # train_stage1()
+    # train_stage2()

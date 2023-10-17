@@ -49,6 +49,29 @@ class CMNISTDeCAMModel(nn.Module):
         return x
 
 
+class CMNISTDeCAMModelInductiveBias(nn.Module):
+    def __init__(self, debias_hidden_layers=3, bias_hidden_layers=5, num_classes=10, stage='1'):
+        super(CMNISTDeCAMModelInductiveBias, self).__init__()
+        self.debias_branch = nn.Sequential(
+            OrderedDict([('c1', nn.Linear(3 * 28 * 28, 100)),
+                         ('r1', nn.ReLU()),
+                         ('s1', MLPHiddenlayers(num_layers=debias_hidden_layers - 2))]))
+
+        self.bias_branch = nn.Sequential(nn.Linear(3 * 28 * 28, 100),
+                                         nn.ReLU(),
+                                         MLPHiddenlayers(num_layers=bias_hidden_layers - 2)
+                                         )
+        self.linear_decodable_layer = nn.Linear(100, num_classes)
+
+    def forward(self, x, debias_weight=1, bias_weight=1):
+        x = x.view(x.size(0), -1)
+        x_debias = self.debias_branch(x)
+        x_bias = self.bias_branch(x)
+        feat = debias_weight * x_debias + bias_weight * x_bias
+        x = self.linear_decodable_layer(feat)
+        return x
+
+
 class CCIFARDeCAMModel(nn.Module):
     def __init__(self, num_classes=10, stage='1'):
         super(CCIFARDeCAMModel, self).__init__()

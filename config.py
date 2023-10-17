@@ -25,7 +25,7 @@ def colored_mnist():
     dataset_tag = "ColoredMNIST"
     data_dir = os.path.join('../data/', 'cmnist')
     log_dir = os.path.join('results', 'cmnist')
-    model_tag = "CMNISTDeCAMModel"
+    model_tag = "CMNISTDeCAMModelInductiveBias"
     num_epochs = 25
     target_attr_idx = 0
     bias_attr_idx = 1
