@@ -152,17 +152,18 @@ def train(
         return accs, accs_aligned, accs_conflict
 
     valid_conflict_best = 0
+    num_models_step = 10
 
     # set all other train/ metrics to use this step
-    wandb.define_metric("acc-debiased-branch/*", step_metric="epoch")
-    wandb.define_metric("acc-biased-branch/*", step_metric="epoch")
+    wandb.define_metric("debias/*", step_metric="model_num")
+    wandb.define_metric("bias/*", step_metric="model_num")
 
-    for i in range(10):
-        linear_decodable_dict = {'debias': (0, 1), 'bias': (1, 0)}
-        for name, weight in linear_decodable_dict.items():
-            for idx in range(2):
-                bias_weight, debias_weight = weight
-                model.load_state_dict(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/5/' + str(i)
+    linear_decodable_dict = {'debias': (0, 1), 'bias': (1, 0)}
+    for name, weight in linear_decodable_dict.items():
+        for idx in range(2):
+            bias_weight, debias_weight = weight
+            for model_num in range(num_models_step):
+                model.load_state_dict(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/5/' + str(model_num)
                                                  + 'debiased_model_stage1.th'), strict=False)
                 optimizer = torch.optim.Adam(model.linear_decodable_layer.parameters(), lr=main_learning_rate,
                                              weight_decay=main_weight_decay)
@@ -185,10 +186,12 @@ def train(
                 if idx == 0:
                     acc_shape, _, _ = evaluate_shape(model, valid_loader, debias_weight=debias_weight,
                                                      bias_weight=bias_weight)
-                    print('idx no : ' + str(i) + ' name : ' + str(name) + ' shape_acc : ' + str(acc_shape))
+                    wandb.log({name + "/shape" : acc_shape, "model_num" : model_num})
+                    print('idx no : ' + str(model_num) + ' name : ' + str(name) + ' shape_acc : ' + str(acc_shape))
                 else:
                     acc_color, _, _ = evaluate_color(model, valid_loader, debias_weight=debias_weight,
                                                      bias_weight=bias_weight)
-                    print('idx no : ' + str(i) + ' name : ' + str(name) + ' color_acc : ' + str(acc_shape))
+                    wandb.log({name + "/color" : acc_color, "model_step" : model_num})
+                    print('idx no : ' + str(model_num) + ' name : ' + str(name) + ' color_acc : ' + str(acc_color))
 
 
