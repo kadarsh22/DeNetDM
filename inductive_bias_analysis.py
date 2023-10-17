@@ -191,7 +191,7 @@ def train(
                 else:
                     acc_color, _, _ = evaluate_color(model, valid_loader, debias_weight=debias_weight,
                                                      bias_weight=bias_weight)
-                    wandb.log({name + "/color" : acc_color, "model_step" : model_num})
+                    wandb.log({name + "/color" : acc_color, "model_num" : model_num})
                     print('idx no : ' + str(model_num) + ' name : ' + str(name) + ' color_acc : ' + str(acc_color))
 
 
