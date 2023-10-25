@@ -31,7 +31,7 @@ def train(
         stage2_poe_weight,
         stage2_dist_weight,
         stage2_T,
-      
+
 ):
     print('Beginning Stage 2')
     device = torch.device(device)
@@ -79,15 +79,16 @@ def train(
     model = get_model(model_tag, num_classes, stage='2').to(device)
     print(model)
     model.load_state_dict(
-        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),strict=False)
-    
-    teacher  = get_model(model_tag, num_classes, stage='1').to(device)
+        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
+        strict=False)
+
+    teacher = get_model(model_tag, num_classes, stage='1').to(device)
     print(teacher)
     teacher.load_state_dict(
-        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),strict=True)
+        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
+        strict=True)
 
-   
-    optimizer = torch.optim.Adam(list(model.debias_branch.parameters()) + list(model.classifier.parameters()), 
+    optimizer = torch.optim.Adam(list(model.debias_branch.parameters()) + list(model.classifier.parameters()),
                                  lr=stage2_main_learning_rate,
                                  weight_decay=stage2_main_weight_decay)
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
@@ -119,7 +120,6 @@ def train(
         accs = torch.mean(accs).item()
         return accs, accs_aligned, accs_conflict
 
-
     accs, accs_aligned, accs_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
     print('Accuracy valid Model_D: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
 
@@ -129,14 +129,14 @@ def train(
 
     accs, accs_aligned, accs_conflict = evaluate(model, train_loader, debias_weight=0, bias_weight=1)
     print('Accuracy Train Model_B: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
-    
+
     wandb.log({"stage2/acc-biased-branch/valid": accs, "epoch": -1})
     wandb.log({"stage2/acc-biased-branch/valid_aligned": accs_aligned, "epoch": -1})
     wandb.log({"stage2/acc-biased-branch/valid_skewed": accs_conflict, "epoch": -1})
-    
+
     accs, accs_aligned, accs_conflict = evaluate(teacher, valid_loader, debias_weight=1, bias_weight=0)
     print('Accuracy Teacher Model: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
-  
+
     valid_conflict_best = 0
     teacher.eval()
     wandb.define_metric("stage2/*", step_metric="epoch")
@@ -146,24 +146,24 @@ def train(
             data = data.to(device)
             attr = attr.to(device)
             label = attr[:, target_attr_idx]
-        
+
             logit = model(data)
             loss_per_sample = label_criterion(logit.squeeze(1), label)
             poe_loss = loss_per_sample.mean()
-            
+
             with torch.no_grad():
                 teacher_logits = teacher(data, debias_weight=1, bias_weight=0)
             student_logits = model(data, debias_weight=1, bias_weight=0)
             soft_targets = F.softmax(teacher_logits / stage2_T, dim=-1)
             soft_prob = F.log_softmax(student_logits / stage2_T, dim=-1)
-            distillation_loss = -torch.sum(soft_targets * soft_prob) / soft_prob.size()[0] * (stage2_T**2)
-            
+            distillation_loss = -torch.sum(soft_targets * soft_prob) / soft_prob.size()[0] * (stage2_T ** 2)
+
             loss = stage2_poe_weight * poe_loss + stage2_dist_weight * distillation_loss
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-    
+
         if (epoch % main_log_freq) == 0:
             loss = loss.detach().cpu()
             wandb.log({"stage2/loss-poe/train": loss, "epoch": epoch})
@@ -188,7 +188,7 @@ def train(
             wandb.log({"stage2/acc-debiased-branch/valid": valid_accs, "epoch": epoch})
             wandb.log({"stage2/acc-debiased-branch/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"stage2/acc-debiased-branch/valid_skewed": valid_conflict, "epoch": epoch})
-            
+
             if dataset_tag != 'bFFHQ':
                 if valid_accs > valid_conflict_best:
                     debiased_model_path = os.path.join(save_path, 'debiased_model_stage2.th')
@@ -196,7 +196,7 @@ def train(
                     wandb.save(debiased_model_path)
                     valid_conflict_best = valid_accs
                     wandb.log({"stage2/acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
-                    
+
             elif dataset_tag == 'bFFHQ':
                 if valid_conflict > valid_conflict_best:
                     debiased_model_path = os.path.join(save_path, 'debiased_model_stage2.th')
@@ -204,7 +204,7 @@ def train(
                     wandb.save(debiased_model_path)
                     valid_conflict_best = valid_conflict
                     wandb.log({"stage2/acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
-                
+
 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
             wandb.log({"stage2/acc-biased-branch/valid-branch1": valid_accs, "epoch": epoch})
