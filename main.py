@@ -7,6 +7,7 @@ from config import ex
 from train_decam_stage1 import train as train_stage1
 from train_decam_stage2 import train as train_stage2
 from inductive_bias_analysis import train as analyse_inductive_bias
+from inductive_bias_analysis_untrained import train
 
 
 def set_seed(seed: int = 172) -> None:
@@ -29,10 +30,11 @@ def main(random_seed, dataset_tag):
 
     wandb.init(project="DeCAM", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = 'DeCAM_linear_decodability_analysis_' + dataset_tag + '_seed_' + str(seed)
+    wandb.run.name = 'DeCAM_linear_decodability_analysis_untrained_3layer' + dataset_tag + '_seed_' + str(seed)
     wandb.run.log_code(".")
     set_seed(seed=seed)
 
-    analyse_inductive_bias()
+    train()
+    # analyse_inductive_bias()
     # train_stage1()
     # train_stage2()

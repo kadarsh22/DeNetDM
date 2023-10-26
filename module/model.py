@@ -59,7 +59,7 @@ class CMNISTDeCAMModelInductiveBias(nn.Module):
 
         self.bias_branch = nn.Sequential(nn.Linear(3 * 28 * 28, 100),
                                          nn.ReLU(),
-                                         MLPHiddenlayers(num_layers=bias_hidden_layers - 2)
+                                         MLPHiddenlayers(num_layers=3)
                                          )
         self.linear_decodable_layer = nn.Linear(100, num_classes)
 
@@ -67,8 +67,8 @@ class CMNISTDeCAMModelInductiveBias(nn.Module):
         x = x.view(x.size(0), -1)
         x_debias = self.debias_branch(x)
         x_bias = self.bias_branch(x)
-        feat = debias_weight * x_debias + bias_weight * x_bias
-        x = self.linear_decodable_layer(feat)
+        # feat = debias_weight * x_debias + bias_weight * x_bias
+        x = self.linear_decodable_layer(x_bias)
         return x
 
 
