@@ -61,7 +61,7 @@ def corrupted_cifar10():
     main_batch_size = 256
     main_optimizer_tag = 'Adam'
     main_learning_rate = 1e-3
-    main_weight_decay = 0.0
+    main_weight_decay = 1e-3
 
     stage2_num_epochs = 200
     stage2_main_batch_size = 256

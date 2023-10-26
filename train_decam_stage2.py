@@ -205,7 +205,6 @@ def train(
                     valid_conflict_best = valid_conflict
                     wandb.log({"stage2/acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
 
-
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
             wandb.log({"stage2/acc-biased-branch/valid-branch1": valid_accs, "epoch": epoch})
             wandb.log({"stage2/acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
