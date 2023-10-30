@@ -1,4 +1,6 @@
+# Import the necessary libraries
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 # Data
 debias_shape_acc = [48.38, 81.91, 83.70, 83.97, 83.57, 84.41, 84.66, 84.42, 84.28, 84.16, 83.71, 83.18, 84.51, 84.67, 84.57, 84.14, 85.04, 85.23, 84.23, 84.80, 83.91]
@@ -11,15 +13,21 @@ plt.rcParams['font.family'] = 'Times New Roman'
 
 # Plot settings for beautification
 plt.figure(figsize=(10, 6))
-plt.plot(debias_shape_acc, label='debias shape_acc', marker='o', linestyle='-')
-plt.plot(debias_color_acc, label='debias color_acc', marker='s', linestyle='--')
-plt.plot(bias_shape_acc, label='bias shape_acc', marker='D', linestyle='-')
-plt.plot(bias_color_acc, label='bias color_acc', marker='^', linestyle='--')
+plt.grid(False)
+
+# Plot data
+plt.plot(debias_shape_acc, label='Shallow Network (Digit)', marker='o', linestyle='-')
+plt.plot(debias_color_acc, label='Shallow Network (Color)', marker='s', linestyle='--')
+plt.plot(bias_shape_acc, label='Deep Network (Digit)', marker='D', linestyle='-')
+plt.plot(bias_color_acc, label='Deep Network (Color)', marker='^', linestyle='--')
 plt.xlabel('Training iteration', fontsize=14)
-plt.ylabel('Accuracy (%)', fontsize=14)
-plt.title('Training Dynamics of DeCaM', fontsize=16)
+plt.ylabel('Linear Decodability (%)', fontsize=14)
+plt.title('Training Dynamics of DeNetDM', fontsize=16)
 plt.legend(fontsize=12)
-plt.grid(True)
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.show()
+
+# Set integer x-axis ticks using MaxNLocator
+ax = plt.gca()
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+# Save the image with highest quality and without white space
+plt.savefig('training_dynamics.svg', bbox_inches='tight', dpi=300)
