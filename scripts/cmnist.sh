@@ -5,7 +5,7 @@
 # seeds=(274 87 5 5881 1)
 # skew=(skewed1 skewed2 skewed3 skewed4)
 
-seeds=(1 2 3 4 5 6 7 8 9 10)
+seeds=(1 2 3 4 5)
 skew=(skewed1)
 
 for skewness in "${skew[@]}"; do
