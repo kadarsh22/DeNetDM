@@ -110,7 +110,8 @@ def train(
 
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
-    save_path = os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed))
+    save_path = os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed),  'erm_models')
+    print(save_path)
     os.makedirs(save_path, exist_ok=True)
 
     # # define evaluation function
@@ -154,17 +155,18 @@ def train(
             attr = attr.to(device)
             label = attr[:, target_attr_idx]
 
-            logit = model(data)
+            logit = model(data, debias_weight=0, bias_weight=1)
             loss_per_sample = label_criterion(logit.squeeze(1), label)
             loss = loss_per_sample.mean()
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            debiased_model_path = os.path.join(save_path, str(idx) + 'debiased_model_stage1.th')
-            torch.save(model.state_dict(), debiased_model_path)
+            debiased_model_path = os.path.join(save_path, str(idx) + 'erm_5_layer.th')
+            if idx % 10 == 0:
+                torch.save(model.state_dict(), debiased_model_path)
             idx = idx + 1
-            if idx == 10:
+            if idx > 200:
                 sys.exit()
 
         if (epoch % main_log_freq) == 0:
