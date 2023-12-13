@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from config import ex
 from train_decam_stage1 import train as train_stage1
-from train_decam_stage2 import train as train_stage2
+# from train_decam_stage2 import train as train_stage2
+#from train_indv_models import train as train_stage1
 
 
 def set_seed(seed: int = 172) -> None:
@@ -24,13 +25,12 @@ def set_seed(seed: int = 172) -> None:
 @ex.automain
 def main(random_seed, dataset_tag):
     wandb.login()
-    seed = random.randint(0,10000)
+    seed = 2
 
-    wandb.init(project="DeCAM", entity="causality-and-robustness-of-classifiers",
-               sync_tensorboard=True)
-    wandb.run.name = 'DeCAM_' + dataset_tag + '_seed_' + str(seed)
+    wandb.init(project="MultiBiasMitigation")
+    wandb.run.name = 'recreate_task_arithmetic' + dataset_tag + '_seed_' + str(seed)
     wandb.run.log_code(".")
     set_seed(seed=seed)
 
     train_stage1(random_seed=seed)
-    train_stage2(random_seed=seed)
+    # train_stage2(random_seed=seed)

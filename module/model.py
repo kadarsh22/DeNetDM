@@ -18,6 +18,21 @@ class MLPHiddenlayers(nn.Module):
             x = self.act(layer(x))
         return x
 
+class MultiCMNISTDeCAMModel(nn.Module):
+    def __init__(self, debias_hidden_layers=5, bias_hidden_layers=5, num_classes=10, stage='1'):
+        super(MultiCMNISTDeCAMModel, self).__init__()
+        self.backbone = nn.Sequential(
+            OrderedDict([('c1', nn.Linear(3 * 28 * 28, 100)),
+                         ('r1', nn.ReLU()),
+                         ('s1', MLPHiddenlayers(num_layers=debias_hidden_layers - 2))]))
+        self.classifier = nn.Linear(100, num_classes)
+
+    def forward(self, x, debias_weight=1, bias_weight=1):
+        x = x.view(x.size(0), -1)
+        feat = self.backbone(x)
+        x = self.classifier(feat)
+        return x
+
 
 class CMNISTDeCAMModel(nn.Module):
     def __init__(self, debias_hidden_layers=3, bias_hidden_layers=5, num_classes=10, stage='1'):

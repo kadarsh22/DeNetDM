@@ -1,9 +1,11 @@
-from module.model import CCIFARDeCAMModel, CMNISTDeCAMModel, BFFHQDeCAMModel, CelebADeCAMModel
+from module.model import CCIFARDeCAMModel, CMNISTDeCAMModel, BFFHQDeCAMModel, CelebADeCAMModel, MultiCMNISTDeCAMModel
 
 
 def get_model(model_tag, num_classes, stage='1'):
     if model_tag == "CMNISTDeCAMModel":
-        model = CMNISTDeCAMModel(debias_hidden_layers=3, bias_hidden_layers=5, num_classes=num_classes, stage=stage)
+        model = CMNISTDeCAMModel(debias_hidden_layers=5, bias_hidden_layers=5, num_classes=num_classes, stage=stage)
+    elif model_tag == "MultiCMNISTDeCAMModel":
+        model = MultiCMNISTDeCAMModel(debias_hidden_layers=5, bias_hidden_layers=3, num_classes=num_classes, stage=stage)
     elif model_tag == 'CCIFARDeCAMModel':
         model = CCIFARDeCAMModel(num_classes=num_classes, stage=stage)
     elif model_tag == 'bFFHQDeCAMModel':

@@ -84,6 +84,29 @@ def train(
     # define model and optimizer
     model = get_model(model_tag, num_classes, stage='1').to(device)
     print(model)
+    with torch.no_grad():
+                ## bias branch
+        print(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th').keys())
+        #model.bias_branch[0].weight.copy_(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th')['backbone.c1.weight'])
+        #model.bias_branch[0].bias.copy_(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th')['backbone.c1.bias'])
+        #model.bias_branch[2].hidden_layers[0].weight.copy_(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th')['backbone.s1.hidden_layers.0.weight'])
+        #model.bias_branch[2].hidden_layers[0].bias.copy_(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th')['backbone.s1.hidden_layers.0.bias'])
+        #model.bias_branch[2].hidden_layers[1].weight.copy_(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th')['backbone.s1.hidden_layers.1.weight'])
+        #model.bias_branch[2].hidden_layers[1].bias.copy_(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th')['backbone.s1.hidden_layers.1.bias'])
+        #model.bias_branch[2].hidden_layers[2].weight.copy_(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th')['backbone.s1.hidden_layers.2.weight'])
+        #model.bias_branch[2].hidden_layers[2].bias.copy_(torch.load('results/cmnist/ColoredMNIST-Skewed0.01-Severity4/stage1/2/gce_model.th')['backbone.s1.hidden_layers.2.bias'])
+
+        ## debias_branch
+        model.debias_branch[0].weight.copy_(torch.load('pretrained_models/difference_model.th')['backbone.c1.weight'])
+        model.debias_branch[0].bias.copy_(torch.load('pretrained_models/difference_model.th')['backbone.c1.bias'])
+        model.debias_branch[2].hidden_layers[0].weight.copy_(torch.load('pretrained_models/difference_model.th')['backbone.s1.hidden_layers.0.weight'])
+        model.debias_branch[2].hidden_layers[0].bias.copy_(torch.load('pretrained_models/difference_model.th')['backbone.s1.hidden_layers.0.bias'])
+        model.debias_branch[2].hidden_layers[0].weight.copy_(torch.load('pretrained_models/difference_model.th')['backbone.s1.hidden_layers.0.weight'])
+        model.debias_branch[2].hidden_layers[0].bias.copy_(torch.load('pretrained_models/difference_model.th')['backbone.s1.hidden_layers.0.bias'])
+        model.debias_branch[2].hidden_layers[0].weight.copy_(torch.load('pretrained_models/difference_model.th')['backbone.s1.hidden_layers.0.weight'])
+        model.debias_branch[2].hidden_layers[0].bias.copy_(torch.load('pretrained_models/difference_model.th')['backbone.s1.hidden_layers.0.bias'])
+        model.classifier.weight.copy_(torch.load('pretrained_models/difference_model.th')['classifier.weight'])
+        model.classifier.bias.copy_(torch.load('pretrained_models/difference_model.th')['classifier.bias'])
 
     if main_optimizer_tag == "SGD":
         optimizer = torch.optim.SGD(
@@ -93,7 +116,7 @@ def train(
             momentum=0.9,
         )
     elif main_optimizer_tag == "Adam":
-        optimizer = torch.optim.Adam(model.parameters(),
+        optimizer = torch.optim.Adam(list(model.bias_branch.parameters())+list(model.classifier.parameters()),
                                      lr=main_learning_rate,
                                      weight_decay=main_weight_decay)
 
