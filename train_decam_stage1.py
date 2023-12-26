@@ -2,12 +2,12 @@ import os
 from tqdm import tqdm
 import wandb
 import torch
-from torch.utils.data import DataLoader
 from config import ex
-from data.util import get_dataset, IdxDataset
-import torch.nn.functional as F
+from data.waterbirds import get_waterbird_dataloader
 from module.util import get_model
-from util import MultiDimAverageMeter
+from util import MultiDimAverageMeter, add_identifier_to_keys
+import torchvision
+import matplotlib.pyplot  as plt
 
 
 @ex.capture
@@ -32,54 +32,9 @@ def train(
     print('Beginning Stage 1')
     device = torch.device(device)
 
-    train_dataset = get_dataset(
-        dataset_tag,
-        data_dir=data_dir,
-        dataset_split="train",
-        transform_split="train"
-    )
-
-    valid_dataset = get_dataset(
-        dataset_tag,
-        data_dir=data_dir,
-        dataset_split="eval",
-        transform_split="eval"
-    )
-
-    train_target_attr = train_dataset.attr[:, target_attr_idx]
-    train_bias_attr = train_dataset.attr[:, bias_attr_idx]
-    attr_dims = [torch.max(train_target_attr).item() + 1, torch.max(train_bias_attr).item() + 1]
-    num_classes = attr_dims[0]
-
-    train_dataset = IdxDataset(train_dataset)
-    valid_dataset = IdxDataset(valid_dataset)
-
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=main_batch_size,
-        shuffle=True,
-        num_workers=16,
-        pin_memory=True,
-        drop_last=True
-    )
-
-    train_loader_for_eval = DataLoader(
-        train_dataset,
-        batch_size=main_batch_size,
-        shuffle=False,
-        num_workers=16,
-        pin_memory=True,
-        drop_last=False
-    )
-
-    valid_loader = DataLoader(
-        valid_dataset,
-        batch_size=main_batch_size,
-        shuffle=True,
-        num_workers=16,
-        pin_memory=True,
-        drop_last=False
-    )
+    num_classes = 2
+    train_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='train')
+    test_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='test')
 
     # define model and optimizer
     model = get_model(model_tag, num_classes, stage='1').to(device)
@@ -111,46 +66,108 @@ def train(
     save_path = os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed))
     os.makedirs(save_path, exist_ok=True)
 
-    # # define evaluation function
-    def evaluate(model, data_loader, debias_weight=1, bias_weight=1):
+    #define evaluation function
+    @torch.no_grad()
+    def evaluate(model, loader, debias_weight=1, bias_weight=0):
         model.eval()
-        attrwise_acc_meter = MultiDimAverageMeter(attr_dims)
-        for _, data, attr in tqdm(data_loader, leave=False):
-            label = attr[:, target_attr_idx]
-            data = data.to(device)
-            attr = attr.to(device)
-            label = label.to(device)
-            with torch.no_grad():
-                logit = model(data, debias_weight=debias_weight, bias_weight=bias_weight)
-                pred = logit.data.max(1, keepdim=True)[1].squeeze(1)
-                correct = (pred == label).long()
 
-            attr = attr[:, [target_attr_idx, bias_attr_idx]]
+        total_correct = 0
+        total_num = 0
+        total_correct_group_zero = 0
+        total_num_group_zero = 0
+        total_correct_group_one = 0
+        total_num_group_one = 0
+        total_correct_group_two = 0
+        total_num_group_two = 0
+        total_correct_group_three = 0
+        total_num_group_three = 0
 
-            attrwise_acc_meter.add(correct.cpu(), attr.cpu())
-        eye_tsr = torch.eye(num_classes)
-        accs = attrwise_acc_meter.get_mean()
-        accs_aligned = accs[eye_tsr > 0.0].mean().item()
-        accs_conflict = accs[eye_tsr == 0.0].mean().item()
-        accs = torch.mean(accs).item()
-        return accs, accs_aligned, accs_conflict
 
-    valid_conflict_best = 0
+        pbar = tqdm(loader, dynamic_ncols=True, desc='evaluating ...')
+        for img, all_attr_label_, env_idx in pbar:
+            all_attr_label = torch.stack(all_attr_label_).T.to(device)
+            img = img.to(device, non_blocking=True)
+            target_attr_label = all_attr_label[:, target_attr_idx]
+            target_attr_label = target_attr_label.to(
+                device, non_blocking=True)
+            cls_out = model(img, debias_weight, bias_weight)
+            if isinstance(cls_out, tuple):
+                logits = cls_out[0]
+            else:
+                logits = cls_out
+            pred = logits.data.max(1, keepdim=True)[1].squeeze(1)
 
-    # set all other train/ metrics to use this step
-    wandb.define_metric("acc-poe/*", step_metric="epoch")
-    wandb.define_metric("acc-debiased-branch/*", step_metric="epoch")
-    wandb.define_metric("acc-biased-branch/*", step_metric="epoch")
+            # average group_accuracy
+            correct = (pred == target_attr_label).long()
+            total_correct += correct.sum().item()
+            total_num += correct.size(0)
+
+            # group_zero_accuracy
+            correct = (pred == target_attr_label).long()[env_idx == 0]
+            total_correct_group_zero += correct.sum().item()
+            total_num_group_zero += correct.size(0)
+
+            # group_one_accuracy
+            correct = (pred == target_attr_label).long()[env_idx == 1]
+            total_correct_group_one += correct.sum().item()
+            total_num_group_one += correct.size(0)
+
+            # group_two_accuracy
+            correct = (pred == target_attr_label).long()[env_idx == 2]
+            total_correct_group_two += correct.sum().item()
+            total_num_group_two += correct.size(0)
+
+            # group_three_accuracy
+            correct = (pred == target_attr_label).long()[env_idx == 3]
+            total_correct_group_three += correct.sum().item()
+            total_num_group_three += correct.size(0)
+
+        avg_group_acc = total_correct / total_num
+        group_zero_acc = total_correct_group_zero / total_num_group_zero
+        group_one_acc = total_correct_group_one / total_num_group_one
+        group_two_acc = total_correct_group_two / total_num_group_two
+        group_three_acc = total_correct_group_three / total_num_group_three
+        worst_group_acc = min(avg_group_acc,group_zero_acc,group_one_acc, group_two_acc, group_three_acc)
+        log_dict = {'avg_group_acc': avg_group_acc,
+                    'worse_group_acc' : worst_group_acc,
+                    'group_0_acc': group_zero_acc,
+                    'group_1_acc': group_one_acc,
+                    'group_2_acc': group_two_acc,
+                    'group_3_acc': group_three_acc}
+
+        return log_dict
+
+    def visualise_model_predictions(model, valid_loader, device, bird_id, plot_name, debias_weight=1, bias_weight=0):
+        if plot_name != "predictions":
+            data = [(images, torch.max(model(images.to(device), debias_weight, bias_weight).data, 1)[1],  attr[0]) for images, attr, _ in
+                    valid_loader]
+        else:
+            data = [(images, torch.max(model(images.to(device), debias_weight , bias_weight).data, 1)[1]) for index, images, attr in valid_loader]
+        img_size = data[0][0].shape[-1]
+        true_labels_birds = torch.stack([d[2] for d in data]).view(-1)
+        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)[true_labels_birds == bird_id]
+        l = torch.stack([d[1] for d in data]).view(-1)[true_labels_birds == bird_id]
+
+        images = []
+        for i in range(2):
+            if x[l.cpu() == i][:10].shape[0] == 10:
+                select = torch.clone(x[l.cpu() == i][:10])
+                images.append(select)
+            else:
+                images.append(torch.zeros((10, 3, img_size, img_size)))
+        images = torch.stack(images).view(-1, 3, img_size, img_size)
+        grid_img = torchvision.utils.make_grid(images[:100], nrow=10, normalize=True)
+        plt.imshow(grid_img.permute(1, 2, 0).cpu().data)
+        wandb.log({plot_name: wandb.Image(grid_img)})
+
     wandb.define_metric("loss-poe/*", step_metric="epoch")
-    wandb.define_metric("train-acc/*", step_metric="epoch")
-
+    target_attr_idx = 0
+    bias_attr_idx = 1
     for epoch in range(num_epochs):
         model.train()
-
-        for _, data, attr in tqdm(train_loader):
+        for data, attr, _ in tqdm(train_loader):
             data = data.to(device)
-            attr = attr.to(device)
-            label = attr[:, target_attr_idx]
+            label = attr[target_attr_idx].to(device)
 
             logit = model(data)
             loss_per_sample = label_criterion(logit.squeeze(1), label)
@@ -164,7 +181,7 @@ def train(
             loss = loss.detach().cpu()
             wandb.log({"loss-poe/train": loss, "epoch": epoch})
 
-            bias_attr = attr[:, bias_attr_idx]  # oracle
+            bias_attr = attr[bias_attr_idx].to(device)  # oracle
             loss_per_sample = loss_per_sample.detach()
             if (label == bias_attr).any().item():
                 aligned_loss = loss_per_sample[label == bias_attr].mean()
@@ -174,44 +191,16 @@ def train(
                 skewed_loss = loss_per_sample[label != bias_attr].mean()
                 wandb.log({"loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
-        if (epoch % main_valid_freq) == 0:
-            valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader)
-            wandb.log({"acc-poe/valid": valid_accs, "epoch": epoch})
-            wandb.log({"acc-poe/valid_aligned": valid_aligned, "epoch": epoch})
-            wandb.log({"acc-poe/valid_skewed": valid_conflict, "epoch": epoch})
+        if epoch % main_log_freq == 0 and epoch > 1:
+            test_accuracy = evaluate(model, test_loader, debias_weight=1, bias_weight=0)
+            test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
+            for bird_id in range(2):
+                visualise_model_predictions(model, test_loader, device, bird_id, 'skip-group-'+ str(bird_id), debias_weight=1, bias_weight=0)
+            wandb.log(test_accuracy)
 
-            valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
-            wandb.log({"acc-debiased-branch/valid": valid_accs, "epoch": epoch})
-            wandb.log({"acc-debiased-branch/valid_aligned": valid_aligned, "epoch": epoch})
-            wandb.log({"acc-debiased-branch/valid_skewed": valid_conflict, "epoch": epoch})
-
-            if valid_conflict > valid_conflict_best:
-                debiased_model_path = os.path.join(save_path, 'debiased_model_stage1.th')
-                torch.save(model.state_dict(), debiased_model_path)
-                wandb.save(debiased_model_path)
-                valid_conflict_best = valid_conflict
-                wandb.log({"acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
-
-            valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
-            wandb.log({"acc-biased-branch/valid-branch1": valid_accs, "epoch": epoch})
-            wandb.log({"acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
-            wandb.log({"acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
-
-            # ##Training accuracies
-
-            valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval)
-            wandb.log({"train-acc/acc-poe/train": valid_accs, "epoch": epoch})
-            wandb.log({"train-acc/acc-poe/train_aligned": valid_aligned, "epoch": epoch})
-            wandb.log({"train-acc/acc-poe/train_skewed": valid_conflict, "epoch": epoch})
-
-            valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval, debias_weight=1,
-                                                                 bias_weight=0)
-            wandb.log({"train-acc/acc-debiased-branch/train": valid_accs, "epoch": epoch})
-            wandb.log({"train-acc/acc-debiased-branch/train_aligned": valid_aligned, "epoch": epoch})
-            wandb.log({"train-acc/acc-debiased-branch/train_skewed": valid_conflict, "epoch": epoch})
-
-            valid_accs, valid_aligned, valid_conflict = evaluate(model, train_loader_for_eval, debias_weight=0,
-                                                                 bias_weight=1)
-            wandb.log({"train-acc/acc-biased-branch/train-branch1": valid_accs, "epoch": epoch})
-            wandb.log({"train-acc/acc-biased-branch/train_aligned": valid_aligned, "epoch": epoch})
-            wandb.log({"train-acc/acc-biased-branch/train_skewed": valid_conflict, "epoch": epoch})
+            test_accuracy = evaluate(model, test_loader, debias_weight=0, bias_weight=1)
+            test_accuracy = add_identifier_to_keys(test_accuracy, 'feature')
+            for bird_id in range(2):
+                visualise_model_predictions(model, test_loader, device, bird_id, 'feature-group-'+ str(bird_id), debias_weight=0, bias_weight=1)
+            wandb.log(test_accuracy)
+        
