@@ -161,6 +161,8 @@ def train(
         wandb.log({plot_name: wandb.Image(grid_img)})
 
     wandb.define_metric("loss-poe/*", step_metric="epoch")
+    wandb.define_metric("acc-debiased-branch/*", step_metric="epoch")
+    wandb.define_metric("acc-biased-branch/*", step_metric="epoch")
     target_attr_idx = 0
     bias_attr_idx = 1
     for epoch in range(num_epochs):
@@ -169,7 +171,7 @@ def train(
             data = data.to(device)
             label = attr[target_attr_idx].to(device)
 
-            logit = model(data)
+            logit = model(data, debias_weight=0, bias_weight=1)
             loss_per_sample = label_criterion(logit.squeeze(1), label)
             loss = loss_per_sample.mean()
 
@@ -192,11 +194,11 @@ def train(
                 wandb.log({"loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
         if epoch % main_log_freq == 0 and epoch > 1:
-            test_accuracy = evaluate(model, test_loader, debias_weight=1, bias_weight=0)
-            test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
-            for bird_id in range(2):
-                visualise_model_predictions(model, test_loader, device, bird_id, 'skip-group-'+ str(bird_id), debias_weight=1, bias_weight=0)
-            wandb.log(test_accuracy)
+            #test_accuracy = evaluate(model, test_loader, debias_weight=1, bias_weight=0)
+            #test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
+            #for bird_id in range(2):
+            #    visualise_model_predictions(model, test_loader, device, bird_id, 'skip-group-'+ str(bird_id), debias_weight=1, bias_weight=0)
+            #wandb.log(test_accuracy)
 
             test_accuracy = evaluate(model, test_loader, debias_weight=0, bias_weight=1)
             test_accuracy = add_identifier_to_keys(test_accuracy, 'feature')

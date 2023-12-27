@@ -92,7 +92,7 @@ class CCIFARDeCAMModel(nn.Module):
 class BFFHQDeCAMModel(nn.Module):
     def __init__(self, num_classes=2, stage='1'):
         super(BFFHQDeCAMModel, self).__init__()
-        self.bias_branch = resnet18(pretrained=False)
+        self.bias_branch = resnet18(pretrained=True)
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():
             params.requires_grad = False
