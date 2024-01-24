@@ -202,3 +202,7 @@ def train(
             for bird_id in range(2):
                 visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
                                             bias_weight=1)
+                
+        debiased_model_path = os.path.join(save_path, 'debiased_model_stage1.th')
+        torch.save(model.state_dict(), debiased_model_path)
+        wandb.save(debiased_model_path)
