@@ -194,13 +194,16 @@ def train(
                 wandb.log({"loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
         if epoch % main_log_freq == 0 and epoch > 1:
-            # test_accuracy = evaluate(model, test_loader, debias_weight=1, bias_weight=0)
-            # test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
-            # for bird_id in range(2):
-            #    visualise_model_predictions(model, test_loader, device, bird_id, 'skip-group-'+ str(bird_id), debias_weight=1, bias_weight=0)
-            # wandb.log(test_accuracy)
+            test_accuracy = evaluate(model, test_loader, debias_weight=1, bias_weight=0)
+            test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
+            for bird_id in range(2):
+                visualise_model_predictions(model, test_loader, device, 'skip-group-' + str(bird_id), debias_weight=1,
+                                            bias_weight=0)
+            wandb.log(test_accuracy)
 
             test_accuracy = evaluate(model, test_loader, debias_weight=0, bias_weight=1)
             test_accuracy = add_identifier_to_keys(test_accuracy, 'feature')
-            visualise_model_predictions(model, test_loader, device, 'feature-group', debias_weight=0, bias_weight=1)
+            for bird_id in range(2):
+                visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
+                                            bias_weight=1)
             wandb.log(test_accuracy)

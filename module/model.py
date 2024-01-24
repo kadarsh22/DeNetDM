@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from module.resnet import resnet20
-from torchvision.models import resnet18, resnet34
+from torchvision.models import resnet18, resnet34, resnet50
 from collections import OrderedDict
 
 
@@ -132,7 +132,7 @@ class BFFHQDeCAMModel(nn.Module):
 class WaterbirdsDeCAMModel(nn.Module):
     def __init__(self, num_classes=2, stage='1'):
         super(WaterbirdsDeCAMModel, self).__init__()
-        self.bias_branch = resnet18(pretrained=True)
+        self.bias_branch = resnet50(pretrained=True)
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():
             params.requires_grad = False
@@ -156,7 +156,7 @@ class WaterbirdsDeCAMModel(nn.Module):
                     ('f1', nn.Flatten(start_dim=1))]))
 
         elif stage == '2':
-            self.debias_branch = resnet18(pretrained=True)
+            self.debias_branch = resnet50(pretrained=True)
             self.debias_branch.fc = nn.Identity()
             for params in self.debias_branch.fc.parameters():
                 params.requires_grad = False
