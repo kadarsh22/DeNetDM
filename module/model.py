@@ -128,14 +128,13 @@ class BFFHQDeCAMModel(nn.Module):
         feat = debias_weight * x_debias + bias_weight * x_bias
         x = self.classifier(feat)
         return x
-    
+
+
 class WaterbirdsDeCAMModel(nn.Module):
     def __init__(self, num_classes=2, stage='1'):
         super(WaterbirdsDeCAMModel, self).__init__()
         self.bias_branch = resnet50(pretrained=True)
-        self.bias_branch.fc = nn.Identity()
-        for params in self.bias_branch.fc.parameters():
-            params.requires_grad = False
+        self.bias_branch.fc = nn.Linear(2048, 512)
 
         if stage == '1':
             self.debias_branch = nn.Sequential(
@@ -157,9 +156,7 @@ class WaterbirdsDeCAMModel(nn.Module):
 
         elif stage == '2':
             self.debias_branch = resnet50(pretrained=True)
-            self.debias_branch.fc = nn.Identity()
-            for params in self.debias_branch.fc.parameters():
-                params.requires_grad = False
+            self.debias_branch.fc = nn.Linear(2048, 512)
         self.classifier = nn.Linear(512, num_classes)
 
     def forward(self, x, debias_weight=1, bias_weight=1):

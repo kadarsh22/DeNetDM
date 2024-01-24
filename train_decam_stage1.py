@@ -68,7 +68,7 @@ def train(
 
     # define evaluation function
     @torch.no_grad()
-    def evaluate(model, loader, debias_weight=1, bias_weight=0):
+    def evaluate(model, loader, branch, debias_weight=1, bias_weight=0):
         model.eval()
 
         total_correct = 0
@@ -127,14 +127,12 @@ def train(
         group_two_acc = total_correct_group_two / total_num_group_two
         group_three_acc = total_correct_group_three / total_num_group_three
         worst_group_acc = min(group_zero_acc, group_one_acc, group_two_acc, group_three_acc)
-        log_dict = {'avg_group_acc': avg_group_acc,
-                    'worse_group_acc': worst_group_acc,
-                    'group_0_acc': group_zero_acc,
-                    'group_1_acc': group_one_acc,
-                    'group_2_acc': group_two_acc,
-                    'group_3_acc': group_three_acc}
-
-        return log_dict
+        wandb.log({"acc/" + str(branch) + "/group0": group_zero_acc,
+                   "acc/" + str(branch) + "/group1": group_one_acc,
+                   "acc/" + str(branch) + "/group2": group_two_acc,
+                   "acc/" + str(branch) + "/group3": group_three_acc,
+                   "acc/" + str(branch) + "/worst_group_acc": worst_group_acc,
+                   "epoch": epoch})
 
     def visualise_model_predictions(model, valid_loader, device, plot_name, debias_weight=1, bias_weight=0):
         if plot_name != "predictions":
@@ -163,6 +161,7 @@ def train(
     wandb.define_metric("loss-poe/*", step_metric="epoch")
     wandb.define_metric("acc-debiased-branch/*", step_metric="epoch")
     wandb.define_metric("acc-biased-branch/*", step_metric="epoch")
+    wandb.define_metric("acc/*", step_metric="epoch")
     target_attr_idx = 0
     bias_attr_idx = 1
     for epoch in range(num_epochs):
@@ -194,16 +193,12 @@ def train(
                 wandb.log({"loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
         if epoch % main_log_freq == 0 and epoch > 1:
-            test_accuracy = evaluate(model, test_loader, debias_weight=1, bias_weight=0)
-            test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
+            evaluate(model, test_loader, 'skip', debias_weight=1, bias_weight=0)
             for bird_id in range(2):
                 visualise_model_predictions(model, test_loader, device, 'skip-group-' + str(bird_id), debias_weight=1,
                                             bias_weight=0)
-            wandb.log(test_accuracy)
 
-            test_accuracy = evaluate(model, test_loader, debias_weight=0, bias_weight=1)
-            test_accuracy = add_identifier_to_keys(test_accuracy, 'feature')
+            evaluate(model, test_loader, 'target', debias_weight=0, bias_weight=1)
             for bird_id in range(2):
                 visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
                                             bias_weight=1)
-            wandb.log(test_accuracy)
