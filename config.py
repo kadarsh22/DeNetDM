@@ -78,7 +78,7 @@ def bffhq():
     data_dir = os.path.join('../data/', 'bffhq')
     log_dir = os.path.join('results', 'bffhq')
     model_tag = 'bFFHQDeCAMModel'
-    num_epochs = 10
+    num_epochs = 50
     target_attr_idx = 0
     bias_attr_idx = 1
     main_valid_freq = 1

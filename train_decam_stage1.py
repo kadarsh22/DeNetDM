@@ -7,7 +7,7 @@ from data.waterbirds import get_waterbird_dataloader
 from module.util import get_model
 from util import MultiDimAverageMeter, add_identifier_to_keys
 import torchvision
-import matplotlib.pyplot  as plt
+import matplotlib.pyplot as plt
 
 
 @ex.capture
@@ -66,7 +66,7 @@ def train(
     save_path = os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed))
     os.makedirs(save_path, exist_ok=True)
 
-    #define evaluation function
+    # define evaluation function
     @torch.no_grad()
     def evaluate(model, loader, debias_weight=1, bias_weight=0):
         model.eval()
@@ -81,7 +81,6 @@ def train(
         total_num_group_two = 0
         total_correct_group_three = 0
         total_num_group_three = 0
-
 
         pbar = tqdm(loader, dynamic_ncols=True, desc='evaluating ...')
         for img, all_attr_label_, env_idx in pbar:
@@ -127,9 +126,9 @@ def train(
         group_one_acc = total_correct_group_one / total_num_group_one
         group_two_acc = total_correct_group_two / total_num_group_two
         group_three_acc = total_correct_group_three / total_num_group_three
-        worst_group_acc = min(avg_group_acc,group_zero_acc,group_one_acc, group_two_acc, group_three_acc)
+        worst_group_acc = min(group_zero_acc, group_one_acc, group_two_acc, group_three_acc)
         log_dict = {'avg_group_acc': avg_group_acc,
-                    'worse_group_acc' : worst_group_acc,
+                    'worse_group_acc': worst_group_acc,
                     'group_0_acc': group_zero_acc,
                     'group_1_acc': group_one_acc,
                     'group_2_acc': group_two_acc,
@@ -137,16 +136,17 @@ def train(
 
         return log_dict
 
-    def visualise_model_predictions(model, valid_loader, device, bird_id, plot_name, debias_weight=1, bias_weight=0):
+    def visualise_model_predictions(model, valid_loader, device, plot_name, debias_weight=1, bias_weight=0):
         if plot_name != "predictions":
-            data = [(images, torch.max(model(images.to(device), debias_weight, bias_weight).data, 1)[1],  attr[0]) for images, attr, _ in
-                    valid_loader]
+            data = [(images, torch.max(model(images.to(device), debias_weight, bias_weight).data, 1)[1], attr[0]) for
+                    images, attr, _ in valid_loader]
         else:
-            data = [(images, torch.max(model(images.to(device), debias_weight , bias_weight).data, 1)[1]) for index, images, attr in valid_loader]
+            data = [(images, torch.max(model(images.to(device), debias_weight, bias_weight).data, 1)[1]) for
+                    index, images, attr in valid_loader]
         img_size = data[0][0].shape[-1]
         true_labels_birds = torch.stack([d[2] for d in data]).view(-1)
-        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)[true_labels_birds == bird_id]
-        l = torch.stack([d[1] for d in data]).view(-1)[true_labels_birds == bird_id]
+        x = torch.stack([d[0] for d in data]).view(-1, 3, img_size, img_size)
+        l = torch.stack([d[1] for d in data]).view(-1)
 
         images = []
         for i in range(2):
@@ -194,15 +194,13 @@ def train(
                 wandb.log({"loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
         if epoch % main_log_freq == 0 and epoch > 1:
-            #test_accuracy = evaluate(model, test_loader, debias_weight=1, bias_weight=0)
-            #test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
-            #for bird_id in range(2):
+            # test_accuracy = evaluate(model, test_loader, debias_weight=1, bias_weight=0)
+            # test_accuracy = add_identifier_to_keys(test_accuracy, 'skip')
+            # for bird_id in range(2):
             #    visualise_model_predictions(model, test_loader, device, bird_id, 'skip-group-'+ str(bird_id), debias_weight=1, bias_weight=0)
-            #wandb.log(test_accuracy)
+            # wandb.log(test_accuracy)
 
             test_accuracy = evaluate(model, test_loader, debias_weight=0, bias_weight=1)
             test_accuracy = add_identifier_to_keys(test_accuracy, 'feature')
-            for bird_id in range(2):
-                visualise_model_predictions(model, test_loader, device, bird_id, 'feature-group-'+ str(bird_id), debias_weight=0, bias_weight=1)
+            visualise_model_predictions(model, test_loader, device, 'feature-group', debias_weight=0, bias_weight=1)
             wandb.log(test_accuracy)
-        

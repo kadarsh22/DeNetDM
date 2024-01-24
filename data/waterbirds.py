@@ -38,7 +38,7 @@ class WaterbirdDataset(Dataset):
         self.y_array = self.metadata_df['y'].values
         self.place_array = self.metadata_df['place'].values
         self.filename_array = self.metadata_df['img_filename'].values
-        self.transform = get_transform_cub(self.split == 'train')
+        self.transform = get_transform_cub(self.split == split)
         self.imgs = [self.transform(Image.open(os.path.join(self.dataset_dir, filename)).convert('RGB')) for filename in self.filename_array.tolist()]
 
     def __len__(self):
@@ -49,7 +49,7 @@ class WaterbirdDataset(Dataset):
         place = self.place_array[idx]
         img = self.imgs[idx]
 
-        return img, (y,place), self.env_dict[(y, place)]
+        return img, (y, place), self.env_dict[(y, place)]
 
 
 def get_transform_cub(train):
@@ -61,7 +61,7 @@ def get_transform_cub(train):
         # Resizes the image to a slightly larger square then crops the center.
         transform = transforms.Compose([
             transforms.Resize((int(target_resolution[0] * scale), int(target_resolution[1] * scale))),
-            transforms.CenterCrop(target_resolution),
+            # transforms.CenterCrop(target_resolution),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
