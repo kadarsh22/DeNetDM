@@ -10,6 +10,8 @@ from module.util import get_model
 from data.waterbirds import get_waterbird_dataloader
 from util import MultiDimAverageMeter
 import torch.nn.functional as F
+import torch.nn as nn
+from torchvision.models import resnet50
 
 
 @ex.capture
@@ -43,12 +45,15 @@ def train(
     valid_loader = get_waterbird_dataloader(stage2_main_batch_size, 0.95, split='test')
 
     # define model and optimizer
-    model = get_model(model_tag, num_classes, stage='2').to(device)
+    model = get_model(model_tag, num_classes, stage='1').to(device)
     print(model)
 
     model.load_state_dict(
         torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
         strict=False)
+
+    model.debias_branch = resnet50(pretrained=True)
+    model.debias_branch.fc = nn.Linear(2048, 512)
 
     teacher = get_model(model_tag, num_classes, stage='1').to(device)
     print(teacher)
@@ -58,12 +63,12 @@ def train(
 
     if stage2_main_optimizer_tag == 'SGD':
         optimizer = torch.optim.SGD(list(model.debias_branch.parameters()) + list(model.classifier.parameters()),
-                                 lr=stage2_main_learning_rate,
-                                 weight_decay=stage2_main_weight_decay)
+                                    lr=stage2_main_learning_rate,
+                                    weight_decay=stage2_main_weight_decay)
     if stage2_main_optimizer_tag == 'Adam':
         optimizer = torch.optim.Adam(list(model.debias_branch.parameters()) + list(model.classifier.parameters()),
-                                 lr=stage2_main_learning_rate,
-                                 weight_decay=stage2_main_weight_decay)
+                                     lr=stage2_main_learning_rate,
+                                     weight_decay=stage2_main_weight_decay)
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
     save_path = os.path.join(log_dir, dataset_tag, 'stage2', str(random_seed))
@@ -136,7 +141,6 @@ def train(
                    "acc/" + str(branch) + "/group3": group_three_acc,
                    "acc/" + str(branch) + "/worst_group_acc": worst_group_acc,
                    "epoch": epoch})
-    
 
     accs, accs_aligned, accs_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
     print('Accuracy valid Model_D: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
@@ -203,10 +207,10 @@ def train(
         if epoch % main_log_freq == 0 and epoch > 1:
             evaluate(model, valid_loader, 'skip', debias_weight=1, bias_weight=0)
             # for bird_id in range(2):
-                # visualise_model_predictions(model, test_loader, device, 'skip-group-' + str(bird_id), debias_weight=1,
-                #                             bias_weight=0)
+            # visualise_model_predictions(model, test_loader, device, 'skip-group-' + str(bird_id), debias_weight=1,
+            #                             bias_weight=0)
 
             evaluate(model, valid_loader, 'target', debias_weight=0, bias_weight=1)
             # for bird_id in range(2):
-                # visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
-                #                             bias_weight=1)
+            # visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
+            #                             bias_weight=1)
