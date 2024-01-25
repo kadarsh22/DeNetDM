@@ -33,5 +33,5 @@ def main(random_seed, dataset_tag):
     wandb.run.log_code(".")
     set_seed(seed=seed)
 
-    train_stage1(random_seed=seed)
+    # train_stage1(random_seed=seed)
     train_stage2(random_seed=seed)

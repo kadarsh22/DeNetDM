@@ -116,7 +116,7 @@ def waterbirds():
     main_weight_decay = 1e-4
 
     stage2_num_epochs = 100
-    stage2_main_batch_size = 128
+    stage2_main_batch_size = 32
     stage2_main_learning_rate = 1e-4
     stage2_main_weight_decay = 1e-4
     stage2_main_optimizer_tag = 'SGD'

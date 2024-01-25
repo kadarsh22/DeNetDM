@@ -53,7 +53,7 @@ def train(
         strict=False)
 
     model.debias_branch = resnet50(pretrained=True)
-    model.debias_branch.fc = nn.Linear(2048, 512)
+    model.debias_branch.fc = nn.Linear(2048, 512)fix    model.to(device)
 
     teacher = get_model(model_tag, num_classes, stage='1').to(device)
     print(teacher)
@@ -135,43 +135,31 @@ def train(
         group_two_acc = total_correct_group_two / total_num_group_two
         group_three_acc = total_correct_group_three / total_num_group_three
         worst_group_acc = min(group_zero_acc, group_one_acc, group_two_acc, group_three_acc)
-        wandb.log({"acc/" + str(branch) + "/group0": group_zero_acc,
-                   "acc/" + str(branch) + "/group1": group_one_acc,
-                   "acc/" + str(branch) + "/group2": group_two_acc,
-                   "acc/" + str(branch) + "/group3": group_three_acc,
-                   "acc/" + str(branch) + "/worst_group_acc": worst_group_acc,
-                   "epoch": epoch})
+        acc = {"acc/" + str(branch) + "/group0": group_zero_acc,
+               "acc/" + str(branch) + "/group1": group_one_acc,
+               "acc/" + str(branch) + "/group2": group_two_acc,
+               "acc/" + str(branch) + "/group3": group_three_acc,
+               "acc/" + str(branch) + "/worst_group_acc": worst_group_acc}
+        return acc
 
-    accs, accs_aligned, accs_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
-    print('Accuracy valid Model_D: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
+    acc = evaluate(model, valid_loader, 'skip', debias_weight=1, bias_weight=0)
+    print("Accuracy of Skip Model")
+    print(acc)
 
-    wandb.log({"stage2/acc-debiased-branch/valid": accs, "epoch": -1})
-    wandb.log({"stage2/acc-debiased-branch/valid_aligned": accs_aligned, "epoch": -1})
-    wandb.log({"stage2/acc-debiased-branch/valid_skewed": accs_conflict, "epoch": -1})
-
-    accs, accs_aligned, accs_conflict = evaluate(model, train_loader, debias_weight=0, bias_weight=1)
-    print('Accuracy Train Model_B: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
-
-    wandb.log({"stage2/acc-biased-branch/valid": accs, "epoch": -1})
-    wandb.log({"stage2/acc-biased-branch/valid_aligned": accs_aligned, "epoch": -1})
-    wandb.log({"stage2/acc-biased-branch/valid_skewed": accs_conflict, "epoch": -1})
-
-    accs, accs_aligned, accs_conflict = evaluate(teacher, valid_loader, debias_weight=1, bias_weight=0)
-    print('Accuracy Teacher Model: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
+    acc = evaluate(model, valid_loader, 'target', debias_weight=0, bias_weight=1)
+    print("Accuracy of target Model")
+    print(acc)
 
     wandb.define_metric("loss-poe/*", step_metric="epoch")
-    wandb.define_metric("acc-debiased-branch/*", step_metric="epoch")
-    wandb.define_metric("acc-biased-branch/*", step_metric="epoch")
-    wandb.define_metric("acc/*", step_metric="epoch")
     valid_conflict_best = 0
     teacher.eval()
     wandb.define_metric("stage2/*", step_metric="epoch")
+    wandb.define_metric("acc/*", step_metric="epoch")
     for epoch in range(stage2_num_epochs):
         model.train()
-        for _, data, attr in tqdm(train_loader):
+        for data, attr, _ in tqdm(train_loader):
             data = data.to(device)
-            attr = attr.to(device)
-            label = attr[:, target_attr_idx]
+            label = attr[target_attr_idx].to(device)
 
             logit = model(data)
             loss_per_sample = label_criterion(logit.squeeze(1), label)
@@ -205,12 +193,16 @@ def train(
                 wandb.log({"loss-poe/train_skewed": skewed_loss, "epoch": epoch})
 
         if epoch % main_log_freq == 0 and epoch > 1:
-            evaluate(model, valid_loader, 'skip', debias_weight=1, bias_weight=0)
+            acc = evaluate(model, valid_loader, 'skip', debias_weight=1, bias_weight=0)
+            acc['epoch'] = epoch
+            wandb.log(acc)
             # for bird_id in range(2):
             # visualise_model_predictions(model, test_loader, device, 'skip-group-' + str(bird_id), debias_weight=1,
             #                             bias_weight=0)
 
-            evaluate(model, valid_loader, 'target', debias_weight=0, bias_weight=1)
+            acc = evaluate(model, valid_loader, 'target', debias_weight=0, bias_weight=1)
+            acc['epoch'] = epoch
+            wandb.log(acc)
             # for bird_id in range(2):
             # visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
             #                             bias_weight=1)
