@@ -53,7 +53,8 @@ def train(
         strict=False)
 
     model.debias_branch = resnet50(pretrained=True)
-    model.debias_branch.fc = nn.Linear(2048, 512)fix    model.to(device)
+    model.debias_branch.fc = nn.Linear(2048, 512)
+    model.to(device)
 
     teacher = get_model(model_tag, num_classes, stage='1').to(device)
     print(teacher)
