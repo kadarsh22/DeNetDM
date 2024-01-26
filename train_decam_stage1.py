@@ -3,7 +3,7 @@ from tqdm import tqdm
 import wandb
 import torch
 from config import ex
-from data.waterbirds import get_waterbird_dataloader
+from data.waterbirds_masktune import get_waterbird_dataloader
 from module.util import get_model
 from util import MultiDimAverageMeter, add_identifier_to_keys
 import torchvision
@@ -33,33 +33,48 @@ def train(
     device = torch.device(device)
 
     num_classes = 2
-    train_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='train')
-    test_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='test')
+    # train_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='train')
+    # test_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='test')
+    train_loader, val_loader , test_loader = get_waterbird_dataloader(data_dir, main_batch_size, main_batch_size)
 
     # define model and optimizer
     model = get_model(model_tag, num_classes, stage='1').to(device)
     print(model)
 
-    if main_optimizer_tag == "SGD":
-        optimizer = torch.optim.SGD(
-            model.parameters(),
+    bias_optimizer = torch.optim.SGD(
+            model.bias_branch.parameters(),
             lr=main_learning_rate,
             weight_decay=main_weight_decay,
             momentum=0.9,
         )
-    elif main_optimizer_tag == "Adam":
-        optimizer = torch.optim.Adam(model.parameters(),
-                                     lr=main_learning_rate,
-                                     weight_decay=main_weight_decay)
-
-    elif main_optimizer_tag == "AdamW":
-        optimizer = torch.optim.AdamW(
-            model.parameters(),
+    
+    debias_optimizer = torch.optim.SGD(
+            list(model.debias_branch.parameters()) + list(model.classifier.parameters()),
             lr=main_learning_rate,
             weight_decay=main_weight_decay,
+            momentum=0.9,
         )
-    else:
-        raise NotImplementedError
+
+    # if main_optimizer_tag == "SGD":
+    #     optimizer = torch.optim.SGD(
+    #         model.parameters(),
+    #         lr=main_learning_rate,
+    #         weight_decay=main_weight_decay,
+    #         momentum=0.9,
+    #     )
+    # elif main_optimizer_tag == "Adam":
+    #     optimizer = torch.optim.Adam(model.parameters(),
+    #                                  lr=main_learning_rate,
+    #                                  weight_decay=main_weight_decay)
+
+    # elif main_optimizer_tag == "AdamW":
+    #     optimizer = torch.optim.AdamW(
+    #         model.parameters(),
+    #         lr=main_learning_rate,
+    #         weight_decay=main_weight_decay,
+    #     )
+    # else:
+    #     raise NotImplementedError
 
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
@@ -174,9 +189,13 @@ def train(
             loss_per_sample = label_criterion(logit.squeeze(1), label)
             loss = loss_per_sample.mean()
 
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
+            bias_optimizer.zero_grad()
+            debias_optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
+            # optimizer.step()
+            bias_optimizer.step()
+            debias_optimizer.step()
 
         if (epoch % main_log_freq) == 0:
             loss = loss.detach().cpu()
@@ -203,6 +222,6 @@ def train(
                 visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
                                             bias_weight=1)
                 
-        debiased_model_path = os.path.join(save_path, 'debiased_model_stage1.th')
-        torch.save(model.state_dict(), debiased_model_path)
-        wandb.save(debiased_model_path)
+            debiased_model_path = os.path.join(save_path, 'debiased_model_stage1.th')
+            torch.save(model.state_dict(), debiased_model_path)
+            wandb.save(debiased_model_path)

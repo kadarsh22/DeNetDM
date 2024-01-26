@@ -136,11 +136,11 @@ def train(
         group_two_acc = total_correct_group_two / total_num_group_two
         group_three_acc = total_correct_group_three / total_num_group_three
         worst_group_acc = min(group_zero_acc, group_one_acc, group_two_acc, group_three_acc)
-        acc = {"acc/" + str(branch) + "/group0": group_zero_acc,
-               "acc/" + str(branch) + "/group1": group_one_acc,
-               "acc/" + str(branch) + "/group2": group_two_acc,
-               "acc/" + str(branch) + "/group3": group_three_acc,
-               "acc/" + str(branch) + "/worst_group_acc": worst_group_acc}
+        acc = {"stage2/acc/" + str(branch) + "/group0": group_zero_acc,
+               "stage2/acc/" + str(branch) + "/group1": group_one_acc,
+               "stage2/acc/" + str(branch) + "/group2": group_two_acc,
+               "stage2/acc/" + str(branch) + "/group3": group_three_acc,
+               "stage2/acc/" + str(branch) + "/worst_group_acc": worst_group_acc}
         return acc
 
     acc = evaluate(model, valid_loader, 'skip', debias_weight=1, bias_weight=0)
@@ -155,7 +155,7 @@ def train(
     valid_conflict_best = 0
     teacher.eval()
     wandb.define_metric("stage2/*", step_metric="epoch")
-    wandb.define_metric("acc/*", step_metric="epoch")
+    # wandb.define_metric("acc/*", step_metric="epoch")
     for epoch in range(stage2_num_epochs):
         model.train()
         for data, attr, _ in tqdm(train_loader):

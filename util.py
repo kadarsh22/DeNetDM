@@ -52,3 +52,21 @@ def add_identifier_to_keys(dictionary, identifier):
         modified_key = f"{identifier}_{key}"
         modified_dict[modified_key] = value
     return modified_dict
+
+def make_borders_black(image_tensor):
+    # Get the dimensions of the image tensor
+    height, width = image_tensor.shape[-2], image_tensor.shape[-1]
+
+    # Set the top border to black
+    image_tensor[:, :, :5, :] = 0
+
+    # Set the bottom border to black
+    image_tensor[:, :, -5:, :] = 0
+
+    # Set the left border to black
+    image_tensor[:, :, :, :5] = 0
+
+    # Set the right border to black
+    image_tensor[:,: , :, -5:] = 0
+
+    return image_tensor
