@@ -47,7 +47,7 @@ def train(
         dataset_tag,
         data_dir=data_dir,
         dataset_split="eval",
-        transform_split="eval"
+        transform_split="test"
     )
 
     train_target_attr = train_dataset.attr[:, target_attr_idx]
@@ -96,7 +96,6 @@ def train(
     save_path = os.path.join(log_dir, dataset_tag, 'stage2', str(random_seed))
     os.makedirs(save_path, exist_ok=True)
 
-    # # define evaluation function
     def evaluate(model, data_loader, debias_weight=1, bias_weight=1):
         model.eval()
         attrwise_acc_meter = MultiDimAverageMeter(attr_dims)
@@ -109,33 +108,33 @@ def train(
                 logit = model(data, debias_weight=debias_weight, bias_weight=bias_weight)
                 pred = logit.data.max(1, keepdim=True)[1].squeeze(1)
                 correct = (pred == label).long()
+            
 
             attr = attr[:, [target_attr_idx, bias_attr_idx]]
-
             attrwise_acc_meter.add(correct.cpu(), attr.cpu())
         eye_tsr = torch.eye(num_classes)
         accs = attrwise_acc_meter.get_mean()
         accs_aligned = accs[eye_tsr > 0.0].mean().item()
         accs_conflict = accs[eye_tsr == 0.0].mean().item()
-        accs = torch.mean(accs).item()
+        # accs = torch.mean(accs).item()
         return accs, accs_aligned, accs_conflict
 
     accs, accs_aligned, accs_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
-    print('Accuracy valid Model_D: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
+    print('Accuracy valid Model_D Aligned Acc : %.4f Conflict Acc %.4f ' % (accs_aligned, accs_conflict))
 
     wandb.log({"stage2/acc-debiased-branch/valid": accs, "epoch": -1})
     wandb.log({"stage2/acc-debiased-branch/valid_aligned": accs_aligned, "epoch": -1})
     wandb.log({"stage2/acc-debiased-branch/valid_skewed": accs_conflict, "epoch": -1})
 
     accs, accs_aligned, accs_conflict = evaluate(model, train_loader, debias_weight=0, bias_weight=1)
-    print('Accuracy Train Model_B: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
+    print('Accuracy Train Aligned Acc : %.4f Conflict Acc %.4f ' % (accs_aligned, accs_conflict))
 
     wandb.log({"stage2/acc-biased-branch/valid": accs, "epoch": -1})
     wandb.log({"stage2/acc-biased-branch/valid_aligned": accs_aligned, "epoch": -1})
     wandb.log({"stage2/acc-biased-branch/valid_skewed": accs_conflict, "epoch": -1})
 
     accs, accs_aligned, accs_conflict = evaluate(teacher, valid_loader, debias_weight=1, bias_weight=0)
-    print('Accuracy Teacher Model: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
+    print('Accuracy Teacher Aligned Acc : %.4f Conflict Acc %.4f ' % (accs_aligned, accs_conflict))
 
     valid_conflict_best = 0
     teacher.eval()
@@ -180,32 +179,57 @@ def train(
 
         if (epoch % main_valid_freq) == 0:
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader)
-            wandb.log({"stage2/acc-poe/valid": valid_accs, "epoch": epoch})
+            # wandb.log({"stage2/acc-poe/valid": valid_accs, "epoch": epoch})
             wandb.log({"stage2/acc-poe/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"stage2/acc-poe/valid_skewed": valid_conflict, "epoch": epoch})
+            
+            wandb.log({"stage2/acc-poe/valid-group0": valid_accs[0][0], "epoch": epoch})
+            wandb.log({"stage2/acc-poe/valid-group1": valid_accs[0][1], "epoch": epoch})
+            wandb.log({"stage2/acc-poe/valid-group2": valid_accs[1][0], "epoch": epoch})
+            wandb.log({"stage2/acc-poe/valid-group3": valid_accs[1][1], "epoch": epoch})
 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
-            wandb.log({"stage2/acc-debiased-branch/valid": valid_accs, "epoch": epoch})
+            # wandb.log({"stage2/acc-debiased-branch/valid": valid_accs, "epoch": epoch})
             wandb.log({"stage2/acc-debiased-branch/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"stage2/acc-debiased-branch/valid_skewed": valid_conflict, "epoch": epoch})
+            
+            wandb.log({"stage2/acc-debiased-branch/valid-group0": valid_accs[0][0], "epoch": epoch})
+            wandb.log({"stage2/acc-debiased-branch/valid-group1": valid_accs[0][1], "epoch": epoch})
+            wandb.log({"stage2/acc-debiased-branch/valid-group2": valid_accs[1][0], "epoch": epoch})
+            wandb.log({"stage2/acc-debiased-branch/valid-group3": valid_accs[1][1], "epoch": epoch})
+            
+            # if dataset_tag != 'bFFHQ':
+            #     if valid_accs > valid_conflict_best:
+            #         debiased_model_path = os.path.join(save_path, 'debiased_model_stage2.th')
+            #         torch.save(model.state_dict(), debiased_model_path)
+            #         wandb.save(debiased_model_path)
+            #         valid_conflict_best = valid_accs
+            #         wandb.log({"stage2/acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
 
-            if dataset_tag != 'bFFHQ':
-                if valid_accs > valid_conflict_best:
-                    debiased_model_path = os.path.join(save_path, 'debiased_model_stage2.th')
-                    torch.save(model.state_dict(), debiased_model_path)
-                    wandb.save(debiased_model_path)
-                    valid_conflict_best = valid_accs
-                    wandb.log({"stage2/acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
-
-            elif dataset_tag == 'bFFHQ':
+            if dataset_tag == 'bFFHQ':
                 if valid_conflict > valid_conflict_best:
                     debiased_model_path = os.path.join(save_path, 'debiased_model_stage2.th')
                     torch.save(model.state_dict(), debiased_model_path)
                     wandb.save(debiased_model_path)
                     valid_conflict_best = valid_conflict
                     wandb.log({"stage2/acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
+                    
+            elif dataset_tag == 'celeba':
+                worst_group_acc = valid_accs.min()
+                if worst_group_acc > valid_conflict_best:
+                    debiased_model_path = os.path.join(save_path, 'debiased_model_stage2.th')
+                    torch.save(model.state_dict(), debiased_model_path)
+                    wandb.save(debiased_model_path)
+                    valid_conflict_best = valid_conflict
+                    wandb.log({"stage2/acc-debiased-branch/valid_best": valid_conflict_best, "epoch": epoch})
+                         
 
             valid_accs, valid_aligned, valid_conflict = evaluate(model, valid_loader, debias_weight=0, bias_weight=1)
             wandb.log({"stage2/acc-biased-branch/valid-branch1": valid_accs, "epoch": epoch})
             wandb.log({"stage2/acc-biased-branch/valid_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"stage2/acc-biased-branch/valid_skewed": valid_conflict, "epoch": epoch})
+            
+            wandb.log({"stage2/acc-biased-branch/valid-group0": valid_accs[0][0], "epoch": epoch})
+            wandb.log({"stage2/acc-biased-branch/valid-group1": valid_accs[0][1], "epoch": epoch})
+            wandb.log({"stage2/acc-biased-branch/valid-group2": valid_accs[1][0], "epoch": epoch})
+            wandb.log({"stage2/acc-biased-branch/valid-group3": valid_accs[1][1], "epoch": epoch})

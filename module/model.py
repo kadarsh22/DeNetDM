@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from module.resnet import resnet20
-from torchvision.models import resnet18, resnet34
+from torchvision.models import resnet18, resnet34, resnet50
 from collections import OrderedDict
 
 
@@ -131,47 +131,41 @@ class BFFHQDeCAMModel(nn.Module):
 
 
 class CelebADeCAMModel(nn.Module):
-    def __init__(self, num_classes=2):
+    def __init__(self, num_classes=2, stage='1'):
         super(CelebADeCAMModel, self).__init__()
-        self.bias_branch = resnet18(pretrained=True)
+        self.bias_branch = resnet18(pretrained=False)
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():
             params.requires_grad = False
 
-        # self.debias_branch = nn.Sequential(OrderedDict([('c1', nn.Conv2d(3, 64, kernel_size=(7, 7))),
-        #                                                      ('b1', nn.BatchNorm2d(64)), ('r1', nn.ReLU(inplace=True)),
-        #                                                      ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-        #                                                      ('c2', nn.Conv2d(64, 128, kernel_size=(3, 3))),
-        #                                                      ('b2', nn.BatchNorm2d(128)), ('r2', nn.ReLU(inplace=True)),
-        #                                                      ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-        #                                                      ('c3', nn.Conv2d(128, 512, kernel_size=(3, 3))),
-        #                                                      ('s3', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-        #                                                      ('b3', nn.BatchNorm2d(512)), ('r3', nn.ReLU(inplace=True)),
-        #                                                      ('c4', nn.Conv2d(512, 512, kernel_size=(3, 3))),
-        #                                                      ('b4', nn.BatchNorm2d(512)),
-        #                                                      ('r4', nn.ReLU(inplace=True))]))
-        self.debias_branch = nn.Sequential(*list(resnet18(pretrained=False).children())[0:5])
-        self.dim_transform = nn.Linear(64, 512)
-        self.debias_branch = nn.Sequential(OrderedDict([('c1', nn.Conv2d(3, 64, kernel_size=(7, 7))),
-                                                        ('b1', nn.BatchNorm2d(64)), ('r1', nn.ReLU(inplace=True)),
-                                                        ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                                                        ('c2', nn.Conv2d(64, 128, kernel_size=(3, 3))),
-                                                        ('b2', nn.BatchNorm2d(128)), ('r2', nn.ReLU(inplace=True)),
-                                                        ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                                                        ('c3', nn.Conv2d(128, 512, kernel_size=(3, 3))),
-                                                        ('s3', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                                                        ('b3', nn.BatchNorm2d(512)), ('r3', nn.ReLU(inplace=True)),
-                                                        ('c4', nn.Conv2d(512, 512, kernel_size=(3, 3))),
-                                                        ('b4', nn.BatchNorm2d(512)),
-                                                        ('r4', nn.ReLU(inplace=True))]))
+        if stage == '1':
+            self.debias_branch = nn.Sequential(
+                OrderedDict([
+                    ('c1', nn.Conv2d(3, 64, kernel_size=(7, 7))),
+                    ('b1', nn.BatchNorm2d(64)), ('r1', nn.ReLU(inplace=True)),
+                    ('s1', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                    ('c2', nn.Conv2d(64, 128, kernel_size=(3, 3))),
+                    ('b2', nn.BatchNorm2d(128)), ('r2', nn.ReLU(inplace=True)),
+                    ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                    ('c3', nn.Conv2d(128, 512, kernel_size=(3, 3))),
+                    ('s3', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                    ('b3', nn.BatchNorm2d(512)), ('r3', nn.ReLU(inplace=True)),
+                    ('c4', nn.Conv2d(512, 512, kernel_size=(3, 3))),
+                    ('b4', nn.BatchNorm2d(512)),
+                    ('r4', nn.ReLU(inplace=True)),
+                    ('a1', nn.AdaptiveAvgPool2d((1, 1))),
+                    ('f1', nn.Flatten(start_dim=1))]))
 
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        elif stage == '2':
+            self.debias_branch = resnet18(pretrained=True)
+            self.debias_branch.fc = nn.Identity()
+            for params in self.debias_branch.fc.parameters():
+                params.requires_grad = False
         self.classifier = nn.Linear(512, num_classes)
 
     def forward(self, x, debias_weight=1, bias_weight=1):
         x_bias = self.bias_branch(x)
-        x_debias = self.avg_pool(self.debias_branch(x))
-        x_debias = self.dim_transform(torch.flatten(x_debias, start_dim=1))
+        x_debias = self.debias_branch(x)
         feat = debias_weight * x_debias + bias_weight * x_bias
         x = self.classifier(feat)
         return x
