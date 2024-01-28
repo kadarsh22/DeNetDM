@@ -1,6 +1,8 @@
 wandb/*
 __pycache__
 results/*
+results_resnet34_resnet18/*
+results_resnet50_resnet34/*
 pretrained_models/*
 artifacts/*
 /*.out

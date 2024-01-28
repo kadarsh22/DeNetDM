@@ -101,8 +101,8 @@ def bffhq():
 @ex.named_config
 def waterbirds():
     dataset_tag = "waterbirds"
-    data_dir = os.path.join('../data', 'waterbirds_cleaned')
-    log_dir = os.path.join('results', 'waterbirds')
+    data_dir = os.path.join('../data', 'waterbirds')
+    log_dir = os.path.join('results_resnet50_resnet34', 'waterbirds')
     model_tag = 'WaterbirdsDeCAMModel'
     num_epochs = 50
     target_attr_idx = 0
@@ -110,14 +110,14 @@ def waterbirds():
     main_valid_freq = 1
     main_log_freq = 1
     main_tag = "waterbirds"
-    main_batch_size = 64
-    main_optimizer_tag = 'Adam'
+    main_batch_size = 32
+    main_optimizer_tag = 'SGD'
     main_learning_rate = 1e-3
     main_weight_decay = 1e-4
 
     stage2_num_epochs = 100
     stage2_main_batch_size = 32
-    stage2_main_learning_rate = 1e-4
+    stage2_main_learning_rate = 1e-3
     stage2_main_weight_decay = 1e-4
     stage2_main_optimizer_tag = 'SGD'
     stage2_poe_weight = 1

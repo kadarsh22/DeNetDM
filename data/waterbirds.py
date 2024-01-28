@@ -59,23 +59,27 @@ def get_transform_cub(train):
 
     if not train:
         # Resizes the image to a slightly larger square then crops the center.
-        transform = transforms.Compose([
-            transforms.Resize((int(target_resolution[0] * scale), int(target_resolution[1] * scale))),
-            transforms.CenterCrop(target_resolution),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ])
+        # transform = transforms.Compose([
+        #     transforms.Resize((int(target_resolution[0] * scale), int(target_resolution[1] * scale))),
+        #     transforms.CenterCrop(target_resolution),
+        #     transforms.ToTensor(),
+        #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        # ])
+        transform=transforms.Compose(
+        [transforms.Resize((224, 224)), transforms.ToTensor()])
     else:
-        transform = transforms.Compose([
-            transforms.RandomResizedCrop(
-                target_resolution,
-                scale=(0.7, 1.0),
-                ratio=(0.75, 1.3333333333333333),
-                interpolation=2),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ])
+        # transform = transforms.Compose([
+        #     transforms.RandomResizedCrop(
+        #         target_resolution,
+        #         scale=(0.7, 1.0),
+        #         ratio=(0.75, 1.3333333333333333),
+        #         interpolation=2),
+        #     transforms.RandomHorizontalFlip(),
+        #     transforms.ToTensor(),
+        #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        # ])
+        transform=transforms.Compose(
+        [transforms.Resize((224, 224)), transforms.ToTensor()])
     return transform
 
 

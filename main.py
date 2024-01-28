@@ -29,7 +29,7 @@ def main(random_seed, dataset_tag):
 
     wandb.init(project="DeCAM", entity="causality-and-robustness-of-classifiers",
                sync_tensorboard=True)
-    wandb.run.name = 'DeCAM_' + dataset_tag + '_seed_' + str(seed)
+    wandb.run.name = 'DeCAM_' + dataset_tag + '_seed_' + str(seed) + '_resnet50_resnet34_stage2_dist_0'
     wandb.run.log_code(".")
     set_seed(seed=seed)
 

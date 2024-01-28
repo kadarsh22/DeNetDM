@@ -49,17 +49,17 @@ def train(
     print(model)
 
     model.load_state_dict(
-        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
+        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1_10_.th')),
         strict=False)
 
-    model.debias_branch = resnet50(pretrained=True)
-    model.debias_branch.fc = nn.Linear(2048, 512)
-    model.to(device)
+    # model.debias_branch = resnet50(pretrained=True)
+    # model.debias_branch.fc = nn.Linear(2048, 512)
+    # model.to(device)
 
     teacher = get_model(model_tag, num_classes, stage='1').to(device)
     print(teacher)
     teacher.load_state_dict(
-        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
+        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1_10_.th')),
         strict=True)
 
     if stage2_main_optimizer_tag == 'SGD':
@@ -75,7 +75,7 @@ def train(
     save_path = os.path.join(log_dir, dataset_tag, 'stage2', str(random_seed))
     os.makedirs(save_path, exist_ok=True)
 
-    # # define evaluation function
+    # define evaluation function
     @torch.no_grad()
     def evaluate(model, loader, branch, debias_weight=1, bias_weight=0):
         model.eval()
@@ -135,13 +135,16 @@ def train(
         group_one_acc = total_correct_group_one / total_num_group_one
         group_two_acc = total_correct_group_two / total_num_group_two
         group_three_acc = total_correct_group_three / total_num_group_three
+        bias_aligned_acc = (total_correct_group_zero + total_correct_group_three) /  (total_num_group_zero + total_num_group_three)
+        bias_conflict_acc  = (total_correct_group_one + total_correct_group_two) /  (total_num_group_one + total_num_group_two)
         worst_group_acc = min(group_zero_acc, group_one_acc, group_two_acc, group_three_acc)
-        acc = {"stage2/acc/" + str(branch) + "/group0": group_zero_acc,
-               "stage2/acc/" + str(branch) + "/group1": group_one_acc,
-               "stage2/acc/" + str(branch) + "/group2": group_two_acc,
-               "stage2/acc/" + str(branch) + "/group3": group_three_acc,
-               "stage2/acc/" + str(branch) + "/worst_group_acc": worst_group_acc}
-        return acc
+        wandb.log({"stage2/acc/" + str(branch) + "/group0": group_zero_acc,
+                   "stage2/acc/" + str(branch) + "/group1": group_one_acc,
+                   "stage2/acc/" + str(branch) + "/group2": group_two_acc,
+                   "stage2/acc/" + str(branch) + "/group3": group_three_acc,
+                   "stage2/acc/" + str(branch) + "/bias_aligned" : bias_aligned_acc,
+                   "stage2/acc/" + str(branch) + "/bias_conflict" : bias_conflict_acc,
+                   "stage2/acc/" + str(branch) + "/worst_group_acc": worst_group_acc})
 
     acc = evaluate(model, valid_loader, 'skip', debias_weight=1, bias_weight=0)
     print("Accuracy of Skip Model")
@@ -195,15 +198,15 @@ def train(
 
         if epoch % main_log_freq == 0 and epoch > 1:
             acc = evaluate(model, valid_loader, 'skip', debias_weight=1, bias_weight=0)
-            acc['epoch'] = epoch
-            wandb.log(acc)
+            # acc['epoch'] = epoch
+            # wandb.log(acc)
             # for bird_id in range(2):
             # visualise_model_predictions(model, test_loader, device, 'skip-group-' + str(bird_id), debias_weight=1,
             #                             bias_weight=0)
 
             acc = evaluate(model, valid_loader, 'target', debias_weight=0, bias_weight=1)
-            acc['epoch'] = epoch
-            wandb.log(acc)
+            # acc['epoch'] = epoch
+            # wandb.log(acc)
             # for bird_id in range(2):
             # visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
             #                             bias_weight=1)

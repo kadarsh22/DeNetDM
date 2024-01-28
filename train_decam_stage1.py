@@ -3,7 +3,7 @@ from tqdm import tqdm
 import wandb
 import torch
 from config import ex
-from data.waterbirds_masktune import get_waterbird_dataloader
+from data.waterbirds import get_waterbird_dataloader
 from module.util import get_model
 from util import MultiDimAverageMeter, add_identifier_to_keys
 import torchvision
@@ -33,48 +33,46 @@ def train(
     device = torch.device(device)
 
     num_classes = 2
-    # train_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='train')
-    # test_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='test')
-    train_loader, val_loader , test_loader = get_waterbird_dataloader(data_dir, main_batch_size, main_batch_size)
+    train_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='train')
+    test_loader = get_waterbird_dataloader(main_batch_size, 0.95, split='test')
 
     # define model and optimizer
     model = get_model(model_tag, num_classes, stage='1').to(device)
     print(model)
 
-    bias_optimizer = torch.optim.SGD(
-            model.bias_branch.parameters(),
-            lr=main_learning_rate,
-            weight_decay=main_weight_decay,
-            momentum=0.9,
-        )
-    
-    debias_optimizer = torch.optim.SGD(
-            list(model.debias_branch.parameters()) + list(model.classifier.parameters()),
-            lr=main_learning_rate,
-            weight_decay=main_weight_decay,
-            momentum=0.9,
-        )
-
-    # if main_optimizer_tag == "SGD":
-    #     optimizer = torch.optim.SGD(
-    #         model.parameters(),
-    #         lr=main_learning_rate,
+    # bias_optimizer = torch.optim.Adam(
+    #         model.bias_branch.parameters(),
+    #         lr=1e-2,
     #         weight_decay=main_weight_decay,
+    #     )
+    
+    # debias_optimizer = torch.optim.SGD(
+    #         list(model.debias_branch.parameters()) + list(model.classifier.parameters()),
+    #         lr=main_learning_rate,
+    #         weight_decay=1e-4,
     #         momentum=0.9,
     #     )
-    # elif main_optimizer_tag == "Adam":
-    #     optimizer = torch.optim.Adam(model.parameters(),
-    #                                  lr=main_learning_rate,
-    #                                  weight_decay=main_weight_decay)
 
-    # elif main_optimizer_tag == "AdamW":
-    #     optimizer = torch.optim.AdamW(
-    #         model.parameters(),
-    #         lr=main_learning_rate,
-    #         weight_decay=main_weight_decay,
-    #     )
-    # else:
-    #     raise NotImplementedError
+    if main_optimizer_tag == "SGD":
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=main_learning_rate,
+            weight_decay=main_weight_decay,
+            momentum=0.9,
+        )
+    elif main_optimizer_tag == "Adam":
+        optimizer = torch.optim.Adam(model.parameters(),
+                                     lr=main_learning_rate,
+                                     weight_decay=main_weight_decay)
+
+    elif main_optimizer_tag == "AdamW":
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=main_learning_rate,
+            weight_decay=main_weight_decay,
+        )
+    else:
+        raise NotImplementedError
 
     label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
 
@@ -141,14 +139,19 @@ def train(
         group_one_acc = total_correct_group_one / total_num_group_one
         group_two_acc = total_correct_group_two / total_num_group_two
         group_three_acc = total_correct_group_three / total_num_group_three
+        bias_aligned_acc = (total_correct_group_zero + total_correct_group_three) /  (total_num_group_zero + total_num_group_three)
+        bias_conflict_acc  = (total_correct_group_one + total_correct_group_two) /  (total_num_group_one + total_num_group_two)
         worst_group_acc = min(group_zero_acc, group_one_acc, group_two_acc, group_three_acc)
         wandb.log({"acc/" + str(branch) + "/group0": group_zero_acc,
                    "acc/" + str(branch) + "/group1": group_one_acc,
                    "acc/" + str(branch) + "/group2": group_two_acc,
                    "acc/" + str(branch) + "/group3": group_three_acc,
+                   "acc/" + str(branch) + "/bias_aligned" : bias_aligned_acc,
+                   "acc/" + str(branch) + "/bias_conflict" : bias_conflict_acc,
                    "acc/" + str(branch) + "/worst_group_acc": worst_group_acc,
                    "epoch": epoch})
 
+    
     def visualise_model_predictions(model, valid_loader, device, plot_name, debias_weight=1, bias_weight=0):
         if plot_name != "predictions":
             data = [(images, torch.max(model(images.to(device), debias_weight, bias_weight).data, 1)[1], attr[0]) for
@@ -185,17 +188,17 @@ def train(
             data = data.to(device)
             label = attr[target_attr_idx].to(device)
 
-            logit = model(data, debias_weight=0, bias_weight=1)
+            logit = model(data)
             loss_per_sample = label_criterion(logit.squeeze(1), label)
             loss = loss_per_sample.mean()
 
-            # optimizer.zero_grad()
-            bias_optimizer.zero_grad()
-            debias_optimizer.zero_grad()
+            optimizer.zero_grad()
+            # bias_optimizer.zero_grad()
+            # debias_optimizer.zero_grad()
             loss.backward()
-            # optimizer.step()
-            bias_optimizer.step()
-            debias_optimizer.step()
+            optimizer.step()
+            # bias_optimizer.step()
+            # debias_optimizer.step()
 
         if (epoch % main_log_freq) == 0:
             loss = loss.detach().cpu()
@@ -222,6 +225,6 @@ def train(
                 visualise_model_predictions(model, test_loader, device, 'feature-group' + str(bird_id), debias_weight=0,
                                             bias_weight=1)
                 
-            debiased_model_path = os.path.join(save_path, 'debiased_model_stage1.th')
-            torch.save(model.state_dict(), debiased_model_path)
-            wandb.save(debiased_model_path)
+        debiased_model_path = os.path.join(save_path, 'debiased_model_stage1_' + str(epoch) + '_.th')
+        torch.save(model.state_dict(), debiased_model_path)
+        wandb.save(debiased_model_path)
