@@ -226,10 +226,7 @@ def train(
             
             visualise_model_predictions(model, valid_loader, device, 'skip', debias_weight=1, bias_weight=0)
 
-            debiased_model_path = os.path.join(save_path, 'debiased_model_stage1.th')
-            torch.save(model.state_dict(), debiased_model_path)
-            wandb.save(debiased_model_path)
-            
+          
             worst_group_acc = valid_accs.min()
             if worst_group_acc > valid_conflict_best:
                 valid_conflict_best = worst_group_acc
@@ -267,3 +264,7 @@ def train(
             wandb.log({"train-acc/acc-biased-branch/train-branch1": valid_accs, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_aligned": valid_aligned, "epoch": epoch})
             wandb.log({"train-acc/acc-biased-branch/train_skewed": valid_conflict, "epoch": epoch})
+
+        debiased_model_path = os.path.join(save_path, 'debiased_model_stage1_' + str(epoch) + '.th')
+        torch.save(model.state_dict(), debiased_model_path)
+        wandb.save(debiased_model_path)
