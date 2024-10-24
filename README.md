@@ -50,11 +50,11 @@ conda activate denetdm                          # Activate the environment
 
 You can generate or download the necessary datasets as described below:
 
-- **ColoredMNIST**: Follow the instructions from the [Learning from Failure repository](https://github.com/alinlab/LfF) to set up the ColoredMNIST dataset.
-- **CorruptedCIFAR10**: Use the instructions from the same repository above for the CorruptedCIFAR10 dataset.
-- **BFFHQ**: Download the dataset from [DFA's BFFHQ dataset](https://github.com/kakaoenterprise/Learning-Debiased-Disentangled).
+- **ColoredMNIST**: Follow the instructions from the [Learning from Failure repository](https://github.com/alinlab/LfF) to set up generate the dataset.
+- **CorruptedCIFAR10**: Use the instructions from the same repository above for the CorruptedCIFAR10.
+- **BFFHQ**: Download the dataset from [BFFHQ](https://github.com/kakaoenterprise/Learning-Debiased-Disentangled).
 
-Once the datasets are ready, place them in a directory that is accessible by your project.
+Once the datasets are ready, place them in a directory that is accessible by your project and update the config.py file with the corresponding path
 
 ---
 
@@ -97,8 +97,8 @@ Pretrained models can be downloaded from [this Google Drive link](https://drive.
 Once you've set up the pretrained models, you can evaluate them using the following commands:
 
 ```bash
-python main.py with server_user colored_mnist skewed1 severity4     # Evaluate on ColoredMNIST
-python main.py with server_user corrupted_cifar10 skewed1 severity4 # Evaluate on CorruptedCIFAR10
+python main.py with colored_mnist skewed1 severity4     # Evaluate on ColoredMNIST
+python main.py with corrupted_cifar10 skewed1 severity4 # Evaluate on CorruptedCIFAR10
 python3 main.py with bffhq                                          # Evaluate on BFFHQ dataset
 ```
 
