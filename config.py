@@ -23,8 +23,8 @@ def get_config():
 @ex.named_config
 def colored_mnist():
     dataset_tag = "ColoredMNIST"
-    data_dir = os.path.join('../data/', 'cmnist')
-    log_dir = os.path.join('results', 'cmnist')
+    data_dir = os.path.join('/vol/research/project_storage', 'ColoredMNIST')
+    log_dir = os.path.join('results', 'ColoredMNIST')
     model_tag = "CMNISTDeCAMModel"
     num_epochs = 100
     target_attr_idx = 0
