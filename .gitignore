@@ -1,0 +1,7 @@
+wandb/*
+__pycache__
+results/*
+pretrained_models/*
+artifacts/*
+nohup*.out
+.nfs*

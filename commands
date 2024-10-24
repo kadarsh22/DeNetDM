@@ -1,0 +1,12 @@
+## CMNIST
+python3 main.py with random_seed=274 colored_mnist skewed3 severity4
+
+
+## CCIFAR10
+python3 main.py with random_seed=274 corrupted_cifar10 type0 skewed3 severity4
+
+
+## BFFHQ
+python3 main.py with random_seed=274 bffhq
+
+
