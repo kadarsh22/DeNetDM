@@ -25,7 +25,8 @@ def colored_mnist():
     dataset_tag = "ColoredMNIST"
     data_dir = os.path.join('/vol/research/project_storage', 'ColoredMNIST')
     log_dir = os.path.join('results', 'ColoredMNIST')
-    model_tag = "CMNISTDeCAMModel"
+    model_tag = "CMNISTDeNetDMModel"
+    pretrained_model_path = 'pretrained_models/colored_mnist/debiased_model.th'
     num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
@@ -49,9 +50,10 @@ def colored_mnist():
 @ex.named_config
 def corrupted_cifar10():
     dataset_tag = "CorruptedCIFAR10"
-    data_dir = os.path.join('../data/', 'corrupted-cifar10')
+    data_dir = os.path.join('/vol/research/project_storage', 'corrupted-cifar10')
     log_dir = os.path.join('results', 'corrupted-cifar10')
-    model_tag = 'CCIFARDeCAMModel'
+    model_tag = 'CCIFARDeNetDMModel'
+    pretrained_model_path = 'pretrained_models/corrupted_cifar10/debiased_model.th'
     num_epochs = 100
     target_attr_idx = 0
     bias_attr_idx = 1
@@ -75,9 +77,10 @@ def corrupted_cifar10():
 @ex.named_config
 def bffhq():
     dataset_tag = "bFFHQ"
-    data_dir = os.path.join('../data/', 'bffhq')
+    data_dir = os.path.join('/vol/research/project_storage/data', 'bffhq')
     log_dir = os.path.join('results', 'bffhq')
-    model_tag = 'bFFHQDeCAMModel'
+    model_tag = 'bFFHQDeNetDModel'
+    pretrained_model_path = 'pretrained_models/bffhq/debiased_model.th'
     num_epochs = 10
     target_attr_idx = 0
     bias_attr_idx = 1

@@ -19,9 +19,9 @@ class MLPHiddenlayers(nn.Module):
         return x
 
 
-class CMNISTDeCAMModel(nn.Module):
+class CMNISTDeNetDMModel(nn.Module):
     def __init__(self, debias_hidden_layers=3, bias_hidden_layers=5, num_classes=10, stage='1'):
-        super(CMNISTDeCAMModel, self).__init__()
+        super(CMNISTDeNetDMModel, self).__init__()
         if stage == '1':
             self.debias_branch = nn.Sequential(
                 OrderedDict([('c1', nn.Linear(3 * 28 * 28, 100)),
@@ -49,9 +49,9 @@ class CMNISTDeCAMModel(nn.Module):
         return x
 
 
-class CCIFARDeCAMModel(nn.Module):
+class CCIFARDeNetDMModel(nn.Module):
     def __init__(self, num_classes=10, stage='1'):
-        super(CCIFARDeCAMModel, self).__init__()
+        super(CCIFARDeNetDMModel, self).__init__()
         self.bias_branch = resnet20(num_classes=num_classes)
         self.bias_branch.linear = nn.Identity()
 
@@ -89,9 +89,9 @@ class CCIFARDeCAMModel(nn.Module):
         return x
 
 
-class BFFHQDeCAMModel(nn.Module):
+class BFFHQDeNetDModel(nn.Module):
     def __init__(self, num_classes=2, stage='1'):
-        super(BFFHQDeCAMModel, self).__init__()
+        super(BFFHQDeNetDModel, self).__init__()
         self.bias_branch = resnet18(pretrained=False)
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():
@@ -130,9 +130,9 @@ class BFFHQDeCAMModel(nn.Module):
         return x
 
 
-class CelebADeCAMModel(nn.Module):
+class CelebADeNetDMModel(nn.Module):
     def __init__(self, num_classes=2):
-        super(CelebADeCAMModel, self).__init__()
+        super(CelebADeNetDMModel, self).__init__()
         self.bias_branch = resnet18(pretrained=True)
         self.bias_branch.fc = nn.Identity()
         for params in self.bias_branch.fc.parameters():

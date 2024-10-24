@@ -1,17 +1,17 @@
-from module.model import CCIFARDeCAMModel, CMNISTDeCAMModel, BFFHQDeCAMModel, CelebADeCAMModel
+from module.model import CCIFARDeNetDMModel, CMNISTDeNetDMModel, BFFHQDeNetDModel, CelebADeNetDMModel
 
 
 def get_model(model_tag, num_classes, stage='1'):
-    if model_tag == "CMNISTDeCAMModel":
-        model = CMNISTDeCAMModel(debias_hidden_layers=3, bias_hidden_layers=5, num_classes=num_classes, stage=stage)
-    elif model_tag == 'CCIFARDeCAMModel':
-        model = CCIFARDeCAMModel(num_classes=num_classes, stage=stage)
-    elif model_tag == 'bFFHQDeCAMModel':
+    if model_tag == "CMNISTDeNetDMModel":
+        model = CMNISTDeNetDMModel(debias_hidden_layers=3, bias_hidden_layers=5, num_classes=num_classes, stage=stage)
+    elif model_tag == 'CCIFARDeNetDMModel':
+        model = CCIFARDeNetDMModel(num_classes=num_classes, stage=stage)
+    elif model_tag == 'bFFHQDeNetDModel':
         assert num_classes == 2
-        model = BFFHQDeCAMModel(num_classes=num_classes, stage=stage)
-    elif model_tag == 'CelebADeCAMModel':
+        model = BFFHQDeNetDModel(num_classes=num_classes, stage=stage)
+    elif model_tag == 'CelebADeNetDMModel':
         assert num_classes == 2
-        model = CelebADeCAMModel(num_classes=num_classes)
+        model = CelebADeNetDMModel(num_classes=num_classes)
     else:
         raise NotImplementedError
     return model

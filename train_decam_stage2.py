@@ -9,6 +9,7 @@ from data.util import get_dataset, IdxDataset
 from module.util import get_model
 from util import MultiDimAverageMeter
 import torch.nn.functional as F
+import sys
 
 
 @ex.capture
@@ -31,6 +32,8 @@ def train(
         stage2_poe_weight,
         stage2_dist_weight,
         stage2_T,
+        pretrained_model_path,
+        eval_only=True,
 
 ):
     print('Beginning Stage 2')
@@ -78,25 +81,7 @@ def train(
 
     model = get_model(model_tag, num_classes, stage='2').to(device)
     print(model)
-    model.load_state_dict(
-        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
-        strict=False)
 
-    teacher = get_model(model_tag, num_classes, stage='1').to(device)
-    print(teacher)
-    teacher.load_state_dict(
-        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
-        strict=True)
-
-    optimizer = torch.optim.Adam(list(model.debias_branch.parameters()) + list(model.classifier.parameters()),
-                                 lr=stage2_main_learning_rate,
-                                 weight_decay=stage2_main_weight_decay)
-    label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
-
-    save_path = os.path.join(log_dir, dataset_tag, 'stage2', str(random_seed))
-    os.makedirs(save_path, exist_ok=True)
-
-    # # define evaluation function
     def evaluate(model, data_loader, debias_weight=1, bias_weight=1):
         model.eval()
         attrwise_acc_meter = MultiDimAverageMeter(attr_dims)
@@ -119,6 +104,32 @@ def train(
         accs_conflict = accs[eye_tsr == 0.0].mean().item()
         accs = torch.mean(accs).item()
         return accs, accs_aligned, accs_conflict
+
+    if eval_only:
+        model.load_state_dict(torch.load(pretrained_model_path))
+        accs, accs_aligned, accs_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
+        print('Accuracy valid Model_D: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))
+        sys.exit(0)
+
+    model.load_state_dict(
+        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
+        strict=False)
+    teacher = get_model(model_tag, num_classes, stage='1').to(device)
+    print(teacher)
+    teacher.load_state_dict(
+        torch.load(os.path.join(log_dir, dataset_tag, 'stage1', str(random_seed), 'debiased_model_stage1.th')),
+        strict=True)
+
+    optimizer = torch.optim.Adam(list(model.debias_branch.parameters()) + list(model.classifier.parameters()),
+                                 lr=stage2_main_learning_rate,
+                                 weight_decay=stage2_main_weight_decay)
+    label_criterion = torch.nn.CrossEntropyLoss(reduction="none")
+
+    save_path = os.path.join(log_dir, dataset_tag, 'stage2', str(random_seed))
+    os.makedirs(save_path, exist_ok=True)
+
+    # # define evaluation function
+
 
     accs, accs_aligned, accs_conflict = evaluate(model, valid_loader, debias_weight=1, bias_weight=0)
     print('Accuracy valid Model_D: %.4f Aligned Acc : %.4f Conflict Acc %.4f ' % (accs, accs_aligned, accs_conflict))

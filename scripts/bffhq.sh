@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# get the sh file executable  chmod +x run.sh, run the sh file using nohup bash scripts/corruptedcifar.sh &
+# get the sh file executable  chmod +x run.sh, run the sh file using nohup bash scripts/corruptedcifar10.sh &
 
 
 seeds=(274 87 5 5881 1)
