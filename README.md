@@ -102,7 +102,7 @@ python main.py with corrupted_cifar10 skewed1 severity4 # Evaluate on CorruptedC
 python3 main.py with bffhq                                          # Evaluate on BFFHQ dataset
 ```
 
-Ensure the path to the pretrained model is correctly set in the `config.py` file for each dataset before running the evaluation.
+Ensure the path to the pretrained model is correctly set in the `config.py` file for each dataset before running the evaluation code.
 
 ---
 
@@ -124,7 +124,7 @@ This code is partly based on the open-source implementations from the following 
 
 ## Citation
 
-If you find this code or idea useful, please cite our work:
+If you find this code or idea useful, please cite our work: 
 
 ```bib
 @misc{sreelatha2024denetdmdebiasingnetworkdepth,
