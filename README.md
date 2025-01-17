@@ -1,7 +1,7 @@
 
 <div align="center">    
  
-# DeNetDM: A PyTorch Implementation for Debiasing Neural Networks through Depth Modulation
+# DeNetDM: Debiasing Neural Networks through Depth Modulation (NeurIPS 2024)
 
 [![Paper](https://img.shields.io/badge/Paper-arxiv.2403.19863-B31B1B?style=for-the-badge)](https://arxiv.org/abs/2403.19863)
 [![Conference](https://img.shields.io/badge/Conference-NeurIPS%202024-4b44ce?style=for-the-badge)](https://nips.cc/virtual/2024/poster/96916)
